@@ -29,13 +29,57 @@ export class TenantRepositoryImpl implements TenantRepository {
   }
 
   async update(id: string, tenant: Partial<Tenant>): Promise<Tenant> {
-    // TODO: Implement update logic
-    throw new Error('Not implemented');
+    const allowedFields: Array<keyof Omit<Tenant, 'id' | 'createdAt'>> = [
+      'slug',
+      'name',
+      'trialEndsAt',
+      'businessHours',
+    ];
+    const fields: string[] = [];
+    const values: any[] = [];
+
+    for (const key of allowedFields) {
+      if (tenant[key] !== undefined) {
+        fields.push(`${this.toColumnName(key)} = $${values.length + 1}`);
+        values.push(
+          key === 'businessHours' ? JSON.stringify(tenant.businessHours) : tenant[key]
+        );
+      }
+    }
+
+    if (!fields.length) {
+      throw new Error('No fields to update');
+    }
+
+    const query = `
+      UPDATE barbershops
+      SET ${fields.join(', ')}
+      WHERE id = $${values.length + 1}
+      RETURNING id, slug, name, trial_ends_at, business_hours, created_at
+    `;
+    values.push(id);
+
+    const result = await this.pool.query(query, values);
+    if (result.rows.length === 0) {
+      throw new Error('Tenant not found');
+    }
+    return this.mapRowToTenant(result.rows[0]);
   }
 
   async delete(id: string): Promise<void> {
-    // TODO: Implement delete logic
-    throw new Error('Not implemented');
+    const query = 'DELETE FROM barbershops WHERE id = $1';
+    await this.pool.query(query, [id]);
+  }
+
+  private toColumnName(field: keyof Omit<Tenant, 'id' | 'createdAt'>): string {
+    switch (field) {
+      case 'trialEndsAt':
+        return 'trial_ends_at';
+      case 'businessHours':
+        return 'business_hours';
+      default:
+        return field;
+    }
   }
 
   private mapRowToTenant(row: any): Tenant {

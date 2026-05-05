@@ -18,6 +18,18 @@ const createTables = async () => {
       );
     `);
 
+    // Create users table
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS users (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        tenant_id UUID REFERENCES barbershops(id),
+        email VARCHAR(200) UNIQUE NOT NULL,
+        password_hash VARCHAR(200) NOT NULL,
+        role VARCHAR(20) NOT NULL DEFAULT 'OWNER',
+        created_at TIMESTAMP DEFAULT NOW()
+      );
+    `);
+
     // Create customers table
     await pool.query(`
       CREATE TABLE IF NOT EXISTS customers (

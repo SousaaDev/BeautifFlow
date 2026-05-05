@@ -41,8 +41,38 @@ export const getTenant = async (req: Request, res: Response) => {
   }
 };
 
+const updateTenantSchema = z.object({
+  name: z.string().optional(),
+  slug: z.string().optional(),
+  businessHours: z.record(z.string()).optional(),
+  trialEndsAt: z.string().optional(),
+});
+
 export const updateTenant = async (req: Request, res: Response) => {
   const { id } = req.params;
-  // TODO: Implement update tenant logic
-  res.json({ message: `Update tenant ${id}` });
+  try {
+    const data = updateTenantSchema.parse(req.body);
+    const updateData = {
+      ...data,
+      trialEndsAt: data.trialEndsAt ? new Date(data.trialEndsAt) : undefined,
+    };
+    const tenant = await tenantRepository.update(id, updateData);
+    res.json({ message: 'Tenant updated', tenant });
+  } catch (error) {
+    if (error instanceof Error) {
+      res.status(400).json({ error: error.message });
+    } else {
+      res.status(400).json({ error: 'Invalid input' });
+    }
+  }
+};
+
+export const deleteTenant = async (req: Request, res: Response) => {
+  const { id } = req.params;
+  try {
+    await tenantRepository.delete(id);
+    res.status(204).send();
+  } catch (error) {
+    res.status(500).json({ error: 'Internal server error' });
+  }
 };
