@@ -5,6 +5,10 @@ export class CreateCustomer {
   constructor(private customerRepository: CustomerRepository) {}
 
   async execute(customerData: Omit<Customer, 'id' | 'createdAt'>): Promise<Customer> {
-    return this.customerRepository.create(customerData);
+    const tags = customerData.tags && customerData.tags.length ? customerData.tags : ['new'];
+    return this.customerRepository.create({
+      ...customerData,
+      tags,
+    });
   }
 }

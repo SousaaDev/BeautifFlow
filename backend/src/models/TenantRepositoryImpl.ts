@@ -7,7 +7,7 @@ export class TenantRepositoryImpl implements TenantRepository {
 
   async create(tenant: Omit<Tenant, 'id' | 'createdAt'>): Promise<Tenant> {
     const query = `
-      INSERT INTO barbershops (slug, name, trial_ends_at, business_hours)
+      INSERT INTO beauty_shops (slug, name, trial_ends_at, business_hours)
       VALUES ($1, $2, $3, $4)
       RETURNING id, slug, name, trial_ends_at, business_hours, created_at
     `;
@@ -17,13 +17,13 @@ export class TenantRepositoryImpl implements TenantRepository {
   }
 
   async findById(id: string): Promise<Tenant | null> {
-    const query = 'SELECT * FROM barbershops WHERE id = $1';
+    const query = 'SELECT * FROM beauty_shops WHERE id = $1';
     const result = await this.pool.query(query, [id]);
     return result.rows.length ? this.mapRowToTenant(result.rows[0]) : null;
   }
 
   async findBySlug(slug: string): Promise<Tenant | null> {
-    const query = 'SELECT * FROM barbershops WHERE slug = $1';
+    const query = 'SELECT * FROM beauty_shops WHERE slug = $1';
     const result = await this.pool.query(query, [slug]);
     return result.rows.length ? this.mapRowToTenant(result.rows[0]) : null;
   }
@@ -52,7 +52,7 @@ export class TenantRepositoryImpl implements TenantRepository {
     }
 
     const query = `
-      UPDATE barbershops
+      UPDATE beauty_shops
       SET ${fields.join(', ')}
       WHERE id = $${values.length + 1}
       RETURNING id, slug, name, trial_ends_at, business_hours, created_at
@@ -67,7 +67,7 @@ export class TenantRepositoryImpl implements TenantRepository {
   }
 
   async delete(id: string): Promise<void> {
-    const query = 'DELETE FROM barbershops WHERE id = $1';
+    const query = 'DELETE FROM beauty_shops WHERE id = $1';
     await this.pool.query(query, [id]);
   }
 

@@ -1,11 +1,11 @@
 import { Router } from 'express';
-import { createTenant, getTenant, updateTenant, deleteTenant } from '../controllers/tenant.controller';
+import { store, show, update, destroy } from '../controllers/tenant.controller';
 
 const router = Router();
 
-router.post('/', createTenant);
-router.get('/:id', getTenant);
-router.put('/:id', updateTenant);
-router.delete('/:id', deleteTenant);
+router.post('/', store);
+router.get('/:id', show);
+router.put('/:id', update);
+router.delete('/:id', destroy);
 
 export default router;

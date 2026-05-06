@@ -1,18 +1,18 @@
 import { Router } from 'express';
 import {
-  createCustomer,
-  getCustomers,
-  getCustomer,
-  updateCustomer,
-  deleteCustomer,
+  store,
+  index,
+  show,
+  update,
+  destroy,
 } from '../controllers/customer.controller';
 
 const router = Router();
 
-router.post('/', createCustomer);
-router.get('/', getCustomers);
-router.get('/:id', getCustomer);
-router.put('/:id', updateCustomer);
-router.delete('/:id', deleteCustomer);
+router.post('/', store);
+router.get('/', index);
+router.get('/:id', show);
+router.put('/:id', update);
+router.delete('/:id', destroy);
 
 export default router;

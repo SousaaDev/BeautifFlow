@@ -1,24 +1,24 @@
-# 💈 BarberFlow SaaS — Documentação Unificada de Contexto para IA
+# 💅 BeautyFlow SaaS — Documentação Unificada de Contexto para IA
 
 > **Versão:** Enterprise Edition — Documento consolidado para ingestão por modelos de linguagem  
-> **Propósito:** Servir como contexto técnico e de negócio completo para IA gerenciar, expandir e tomar decisões sobre o sistema BarberFlow.
+> **Propósito:** Servir como contexto técnico e de negócio completo para IA gerenciar, expandir e tomar decisões sobre o sistema BeautyFlow.
 
 ---
 
 ## 📌 1. VISÃO EXECUTIVA
 
-O **BarberFlow** é uma plataforma SaaS vertical **multi-tenant de alta disponibilidade**, projetada para transformar barbearias em operações orientadas a dados. O sistema fecha o ciclo de vida completo do cliente: do **atrair** (marketing/bot) ao **reter** (automação/CRM) ao **monetizar** (assinaturas recorrentes).
+O **BeautyFlow** é uma plataforma SaaS vertical **multi-tenant de alta disponibilidade**, projetada para transformar salões de beleza e lojas de serviços estéticos em operações orientadas a dados. O sistema fecha o ciclo de vida completo do cliente: do **atrair** (marketing/bot) ao **reter** (automação/CRM) ao **monetizar** (assinaturas recorrentes).
 
 ### 🎯 Proposta de Valor
 
-> Aumentar o faturamento da barbearia através de automação, dados e comunicação inteligente — tornando o software indispensável para a saúde financeira do negócio.
+> Aumentar o faturamento do salão de beleza através de automação, dados e comunicação inteligente — tornando o software indispensável para a saúde financeira do negócio.
 
 ### Diferencial Competitivo
 
-- Sistema Operacional completo da barbearia (não apenas agenda)
+- Sistema Operacional completo do salão (não apenas agenda)
 - Motor de retenção ativo via WhatsApp
-- Receita recorrente para a barbearia via assinaturas de clientes
-- Inteligência analítica via chatbot do dono
+- Receita recorrente para o salão via assinaturas de clientes
+- Inteligência analítica via chatbot do gerenciador
 - Multi-tenant com isolamento total de dados por unidade
 
 ---
@@ -39,9 +39,9 @@ O **BarberFlow** é uma plataforma SaaS vertical **multi-tenant de alta disponib
 - Ausência de follow-up automatizado pós-atendimento
 
 ### Problemas Comerciais
-- Baixa venda de produtos no balcão
+- Baixa venda de produtos e serviços complementares
 - Falta de estratégia de upsell e cross-sell
-- Nenhuma oferta de produto de receita recorrente (assinaturas)
+- Nenhuma oferta de produto/serviço de receita recorrente (assinaturas)
 
 ### Problemas Estratégicos
 - Dono não tem dados para tomar decisões
@@ -85,19 +85,19 @@ O **BarberFlow** é uma plataforma SaaS vertical **multi-tenant de alta disponib
 
 | Entidade | Descrição | Campos-Chave |
 |---|---|---|
-| `tenants` (barbershops) | Unidade de negócio isolada | `id`, `slug`, `trial_ends_at`, `business_hours (JSONB)` |
-| `customers` | Clientes da barbearia | `id`, `tenant_id`, `name`, `phone`, `tags`, `last_visit` |
-| `barbers` | Profissionais cadastrados | `id`, `tenant_id`, `name`, `commission_rate` |
-| `services` | Serviços oferecidos | `id`, `tenant_id`, `name`, `duration_minutes`, `price`, `commission_rate` |
-| `appointments` | Agendamentos (recurso mais disputado) | `id`, `customer_id`, `barber_id`, `service_id`, `start_time`, `end_time`, `status`, `internal_notes` |
+| `tenants` (beauty_shops) | Unidade de negócio isolada | `id`, `slug`, `trial_ends_at`, `business_hours (JSONB)` |
+| `customers` | Clientes do salão | `id`, `tenant_id`, `name`, `phone`, `tags`, `last_visit` |
+| `professionals` | Profissionais cadastrados (terapeutas, esteticistas) | `id`, `tenant_id`, `name`, `commission_rate` |
+| `services` | Serviços oferecidos (corte, cílios, massagem, etc.) | `id`, `tenant_id`, `name`, `duration_minutes`, `price`, `commission_rate` |
+| `appointments` | Agendamentos (recurso mais disputado) | `id`, `customer_id`, `professional_id`, `service_id`, `start_time`, `end_time`, `status`, `internal_notes` |
 | `products` | Produtos para venda/estoque | `id`, `tenant_id`, `name`, `current_stock`, `min_threshold`, `cost_price`, `sale_price` |
-| `sales` | Vendas realizadas (PDV) | `id`, `tenant_id`, `customer_id`, `barber_id`, `total`, `payment_method`, `created_at` |
+| `sales` | Vendas realizadas (PDV) | `id`, `tenant_id`, `customer_id`, `professional_id`, `total`, `payment_method`, `created_at` |
 | `sale_items` | Itens de cada venda | `id`, `sale_id`, `product_id`, `service_id`, `quantity`, `unit_price` |
 | `transactions` | Fluxo de caixa detalhado | `id`, `tenant_id`, `type (IN/OUT)`, `category`, `payment_method`, `amount`, `metadata` |
 | `automations` | Regras do motor de retenção | `id`, `tenant_id`, `trigger`, `condition`, `action`, `is_active` |
 | `messages` | Log de mensagens enviadas | `id`, `tenant_id`, `customer_id`, `channel`, `content`, `sent_at`, `status` |
 | `loyalty_points` | Saldo de fidelidade por cliente | `id`, `customer_id`, `points`, `updated_at` |
-| `membership_plans` | Planos de assinatura da barbearia | `id`, `tenant_id`, `name`, `price`, `billing_cycle`, `services_included (JSONB)` |
+| `membership_plans` | Planos de assinatura do salão | `id`, `tenant_id`, `name`, `price`, `billing_cycle`, `services_included (JSONB)` |
 | `subscriptions` | Assinaturas ativas dos clientes | `id`, `customer_id`, `plan_id`, `status`, `current_period_start`, `current_period_end`, `external_subscription_id` |
 
 ### 4.2 DDL Completo (SQL)
@@ -106,8 +106,8 @@ O **BarberFlow** é uma plataforma SaaS vertical **multi-tenant de alta disponib
 -- Extensão para performance em buscas geográficas (opcional)
 CREATE EXTENSION IF NOT EXISTS postgis;
 
--- Barbearias (tenants)
-CREATE TABLE barbershops (
+-- Salões de Beleza (tenants)
+CREATE TABLE beauty_shops (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   slug VARCHAR(100) UNIQUE NOT NULL,
   name VARCHAR(200) NOT NULL,
@@ -119,7 +119,7 @@ CREATE TABLE barbershops (
 -- Clientes
 CREATE TABLE customers (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  tenant_id UUID NOT NULL REFERENCES barbershops(id),
+  tenant_id UUID NOT NULL REFERENCES beauty_shops(id),
   name VARCHAR(200) NOT NULL,
   phone VARCHAR(20),
   email VARCHAR(200),
@@ -128,10 +128,10 @@ CREATE TABLE customers (
   created_at TIMESTAMP DEFAULT NOW()
 );
 
--- Barbeiros
-CREATE TABLE barbers (
+-- Profissionais (Terapeutas, Esteticistas)
+CREATE TABLE professionals (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  tenant_id UUID NOT NULL REFERENCES barbershops(id),
+  tenant_id UUID NOT NULL REFERENCES beauty_shops(id),
   name VARCHAR(200) NOT NULL,
   phone VARCHAR(20),
   commission_rate DECIMAL(5,2) DEFAULT 0.00,
@@ -142,7 +142,7 @@ CREATE TABLE barbers (
 -- Serviços
 CREATE TABLE services (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  tenant_id UUID NOT NULL REFERENCES barbershops(id),
+  tenant_id UUID NOT NULL REFERENCES beauty_shops(id),
   name VARCHAR(100) NOT NULL,
   duration_minutes INTEGER NOT NULL,
   price DECIMAL(10, 2) NOT NULL,
@@ -153,9 +153,9 @@ CREATE TABLE services (
 -- Agendamentos
 CREATE TABLE appointments (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  tenant_id UUID NOT NULL REFERENCES barbershops(id),
+  tenant_id UUID NOT NULL REFERENCES beauty_shops(id),
   customer_id UUID REFERENCES customers(id),
-  barber_id UUID REFERENCES barbers(id),
+  professional_id UUID REFERENCES professionals(id),
   service_id UUID REFERENCES services(id),
   start_time TIMESTAMP NOT NULL,
   end_time TIMESTAMP NOT NULL,
@@ -168,7 +168,7 @@ CREATE TABLE appointments (
 -- Produtos
 CREATE TABLE products (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  tenant_id UUID NOT NULL REFERENCES barbershops(id),
+  tenant_id UUID NOT NULL REFERENCES beauty_shops(id),
   name VARCHAR(200) NOT NULL,
   current_stock INTEGER DEFAULT 0,
   min_threshold INTEGER DEFAULT 5,
@@ -180,9 +180,9 @@ CREATE TABLE products (
 -- Vendas (PDV)
 CREATE TABLE sales (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  tenant_id UUID NOT NULL REFERENCES barbershops(id),
+  tenant_id UUID NOT NULL REFERENCES beauty_shops(id),
   customer_id UUID REFERENCES customers(id),
-  barber_id UUID REFERENCES barbers(id),
+  professional_id UUID REFERENCES professionals(id),
   total DECIMAL(10,2) NOT NULL,
   payment_method VARCHAR(50),
   created_at TIMESTAMP DEFAULT NOW()
@@ -201,7 +201,7 @@ CREATE TABLE sale_items (
 -- Transações financeiras
 CREATE TABLE transactions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  tenant_id UUID NOT NULL REFERENCES barbershops(id),
+  tenant_id UUID NOT NULL REFERENCES beauty_shops(id),
   type VARCHAR(3) NOT NULL CHECK (type IN ('IN', 'OUT')),
   category VARCHAR(100),
   amount DECIMAL(10,2) NOT NULL,
@@ -214,7 +214,7 @@ CREATE TABLE transactions (
 -- Automações
 CREATE TABLE automations (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  tenant_id UUID NOT NULL REFERENCES barbershops(id),
+  tenant_id UUID NOT NULL REFERENCES beauty_shops(id),
   name VARCHAR(200),
   trigger VARCHAR(100), -- ex: 'last_visit_gt_days'
   condition JSONB,       -- ex: {"days": 20, "tags": ["VIP"]}
@@ -226,7 +226,7 @@ CREATE TABLE automations (
 -- Mensagens enviadas
 CREATE TABLE messages (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  tenant_id UUID NOT NULL REFERENCES barbershops(id),
+  tenant_id UUID NOT NULL REFERENCES beauty_shops(id),
   customer_id UUID REFERENCES customers(id),
   channel VARCHAR(20) DEFAULT 'whatsapp',
   content TEXT,
@@ -238,7 +238,7 @@ CREATE TABLE messages (
 CREATE TABLE loyalty_points (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   customer_id UUID NOT NULL REFERENCES customers(id),
-  tenant_id UUID NOT NULL REFERENCES barbershops(id),
+  tenant_id UUID NOT NULL REFERENCES beauty_shops(id),
   points INTEGER DEFAULT 0,
   updated_at TIMESTAMP DEFAULT NOW()
 );
@@ -246,12 +246,12 @@ CREATE TABLE loyalty_points (
 -- Planos de assinatura
 CREATE TABLE membership_plans (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  tenant_id UUID NOT NULL REFERENCES barbershops(id),
-  name VARCHAR(100) NOT NULL,          -- Ex: "VIP Pass", "Corte Ilimitado"
+  tenant_id UUID NOT NULL REFERENCES beauty_shops(id),
+  name VARCHAR(100) NOT NULL,          -- Ex: "VIP Pass", "Pacote Ilimitado"
   description TEXT,
   price DECIMAL(10, 2) NOT NULL,
   billing_cycle VARCHAR(10) CHECK (billing_cycle IN ('monthly', 'yearly')),
-  services_included JSONB,             -- Ex: {"corte": "unlimited", "barba": 2}
+  services_included JSONB,             -- Ex: {"corte_cabelo": "unlimited", "cilios": 2}
   is_active BOOLEAN DEFAULT true,
   created_at TIMESTAMP DEFAULT NOW()
 );
@@ -260,7 +260,7 @@ CREATE TABLE membership_plans (
 CREATE TABLE subscriptions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   customer_id UUID NOT NULL REFERENCES customers(id),
-  tenant_id UUID NOT NULL REFERENCES barbershops(id),
+  tenant_id UUID NOT NULL REFERENCES beauty_shops(id),
   plan_id UUID NOT NULL REFERENCES membership_plans(id),
   status VARCHAR(20) CHECK (status IN ('active', 'past_due', 'cancelled', 'trialing')),
   current_period_start TIMESTAMP,
@@ -280,14 +280,14 @@ CREATE TABLE subscriptions (
 ```sql
 -- Antes de confirmar, verificar interseção de tempo
 SELECT id FROM appointments
-WHERE barber_id = :barber_id
+WHERE professional_id = :professional_id
   AND status NOT IN ('cancelled')
   AND (start_time, end_time) OVERLAPS (:requested_start, :requested_end);
 -- Se retornar qualquer linha → slot indisponível
 ```
 
 **Regras de negócio:**
-- Buffer Time configurável por barbeiro (default: 10 min) adicionado automaticamente ao `end_time`
+- Buffer Time configurável por profissional (default: 10 min) adicionado automaticamente ao `end_time`
 - Não permitir agendamentos fora do `business_hours` do tenant
 - Lock distribuído via Redis ao confirmar agendamento (prevenção de race condition)
 - Agendamentos de assinante: `price_charged = 0.00` se serviço coberto pelo plano
@@ -352,9 +352,9 @@ SALE_COMPLETED
 
 **Funcionalidades:**
 - CRUD completo de agendamentos
-- Suporte a múltiplos barbeiros simultâneos
+- Suporte a múltiplos profissionais simultâneos
 - Serviços com duração variável
-- Visualização por dia/semana/barbeiro
+- Visualização por dia/semana/profissional
 - Arraste e solte (drag & drop) — Milestone Beta
 - Lembretes automáticos 2h e 24h antes via WhatsApp
 
@@ -399,20 +399,20 @@ O motor executa periodicamente (cron job ou event trigger) verificando condiçõ
 - Receita de assinaturas (MRR)
 
 **Saídas registradas:**
-- Comissões de barbeiros
+- Comissões de profissionais
 - Custos operacionais
 - Reposição de estoque
 
 **Relatórios disponíveis:**
 - DRE Simplificado (Receita − Custos = Lucro)
 - Fluxo de Caixa por período
-- Comissões por barbeiro
+- Comissões por profissional
 - MRR (Monthly Recurring Revenue) de assinaturas
 
 **Regra de comissão:**
 - Calculada por serviço individual com `commission_rate` própria
 - Taxas de cartão deduzidas antes do cálculo de comissão (split lógico)
-- Assinaturas: barbeiro recebe comissão sobre valor base do plano, mesmo que o agendamento seja R$ 0,00 para o cliente
+- Assinaturas: profissional recebe comissão sobre valor base do plano, mesmo que o agendamento seja R$ 0,00 para o cliente
 
 ---
 
@@ -467,36 +467,36 @@ O motor executa periodicamente (cron job ou event trigger) verificando condiçõ
 - MRR (receita de assinaturas)
 - Novos clientes vs. recorrentes
 - Ranking de serviços mais vendidos
-- Ranking de barbeiros por faturamento
+- Ranking de profissionais por faturamento
 - Churn de assinantes do mês
 
 ---
 
-## 💳 8. MÓDULO DE ASSINATURAS (BARBER SUBSCRIPTIONS)
+## 💳 8. MÓDULO DE ASSINATURAS (BEAUTY SUBSCRIPTIONS)
 
-Este módulo permite que a barbearia venda **planos de corte recorrentes**, gerando **MRR previsível** e aumentando a retenção de clientes.
+Este módulo permite que o salão venda **planos de serviços recorrentes**, gerando **MRR previsível** e aumentando a retenção de clientes.
 
 ### 8.1 Modelos de Plano (Exemplos)
 
 | Plano | Incluso | Modelo |
 |---|---|---|
-| **Basic** | Corte ilimitado (ou X/mês) | Recorrente mensal |
-| **VIP** | Corte + Barba + 1 bebida por visita | Recorrente mensal |
-| **Premium** | Corte + Barba + Sobrancelha + desconto em produtos | Anual |
-| **Black** | Tudo ilimitado + prioridade de agendamento | Recorrente mensal |
+| **Basic** | 2 cortes de cabelo/mês | Recorrente mensal |
+| **Premium** | Corte + Hidratação + Escova + 1 cílios/mês | Recorrente mensal |
+| **Deluxe** | Corte + Tingimento + Massagem + Cílios + Desconto em produtos | Anual |
+| **VIP** | Tudo ilimitado + prioridade de agendamento + kit produtos | Recorrente mensal |
 
 ### 8.2 Schema de Assinaturas
 
 ```sql
--- Planos oferecidos pela barbearia
+-- Planos oferecidos pelo salão
 CREATE TABLE membership_plans (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  tenant_id UUID REFERENCES barbershops(id),
+  tenant_id UUID REFERENCES beauty_shops(id),
   name VARCHAR(100),
   description TEXT,
   price DECIMAL(10, 2) NOT NULL,
   billing_cycle VARCHAR(10) CHECK (billing_cycle IN ('monthly', 'yearly')),
-  services_included JSONB, -- Ex: {"corte": "unlimited", "barba": 2}
+  services_included JSONB, -- Ex: {"corte_cabelo": "unlimited", "cilios": 2, "massagem": "1x/mês"}
   is_active BOOLEAN DEFAULT true
 );
 
@@ -504,7 +504,7 @@ CREATE TABLE membership_plans (
 CREATE TABLE subscriptions (
   id UUID PRIMARY KEY,
   customer_id UUID REFERENCES customers(id),
-  tenant_id UUID REFERENCES barbershops(id),
+  tenant_id UUID REFERENCES beauty_shops(id),
   plan_id UUID REFERENCES membership_plans(id),
   status VARCHAR(20) CHECK (status IN ('active', 'past_due', 'cancelled', 'trialing')),
   current_period_start TIMESTAMP,
@@ -549,7 +549,7 @@ ao_agendar(customer_id, service_id):
 | **Downgrade** | Mudança para plano inferior → efetivo no próximo ciclo |
 | **Cancelamento** | `status = 'cancelled'` → acesso até fim do período pago |
 | **Trial** | `status = 'trialing'` → acesso liberado sem cobrança por N dias |
-| **Comissão do barbeiro** | Calculada sobre valor base do plano, independente do `price_charged` ao cliente |
+| **Comissão do profissional** | Calculada sobre valor base do plano, independente do `price_charged` ao cliente |
 
 ---
 
@@ -563,21 +563,21 @@ ao_agendar(customer_id, service_id):
 
 **Máquina de estados:**
 ```
-START → SERVICE_SELECTION → BARBER_SELECTION → TIME_SELECTION → CONFIRM → BOOKED
+START → SERVICE_SELECTION → PROFESSIONAL_SELECTION → TIME_SELECTION → CONFIRM → BOOKED
                                                                        ↓
                                                               REMINDER_24H → REMINDER_2H
 ```
 
 **Exemplo de fluxo — agendamento:**
 ```
-User: "quero cortar"
-Bot:  "Qual serviço? [Corte] [Corte + Barba] [Barba]"
+User: "quero cortar cabelo"
+Bot:  "Qual serviço? [Corte] [Corte + Cílios] [Escova] [Tingimento]"
 User: [Corte]
-Bot:  "Com qual barbeiro? [João] [Pedro] [Qualquer um]"
-User: [João]
-Bot:  "Horários disponíveis para João amanhã: [10:00] [14:00] [16:30]"
+Bot:  "Com qual profissional? [Ana] [Maria] [Qualquer uma]"
+User: [Ana]
+Bot:  "Horários disponíveis para Ana amanhã: [10:00] [14:00] [16:30]"
 User: [14:00]
-Bot:  "Confirma: Corte com João, amanhã às 14h? [Sim] [Não]"
+Bot:  "Confirma: Corte com Ana, amanhã às 14h? [Sim] [Não]"
 User: [Sim]
 Bot:  "Agendado! 🎉 Localização: [Maps Link]. Até amanhã!"
 ```
@@ -591,7 +591,7 @@ Bot: "Olá, Felipe! 👋 Você é nosso assinante VIP.
 **Fluxo adicional — upsell de assinatura:**
 ```
 Bot: "Você gastou R$ 120 nos últimos 2 meses.
-      Com nosso Plano Black (R$ 99/mês), você tem cortes ilimitados.
+      Com nosso Plano Premium (R$ 99/mês), você tem serviços ilimitados.
       Quer assinar agora? [Sim, quero!] [Ver detalhes] [Agora não]"
 ```
 
@@ -614,7 +614,7 @@ Bot: "Você gastou R$ 120 nos últimos 2 meses.
 | "Quanto faturei hoje?" | `SELECT SUM(total) FROM sales WHERE tenant_id = :tid AND DATE(created_at) = CURRENT_DATE` |
 | "Quem é meu melhor cliente do mês?" | `SELECT customer_id, SUM(total) FROM sales WHERE tenant_id = :tid AND DATE_TRUNC('month', created_at) = DATE_TRUNC('month', NOW()) GROUP BY customer_id ORDER BY SUM(total) DESC LIMIT 1` |
 | "Qual serviço mais vendeu essa semana?" | `SELECT service_id, COUNT(*) FROM sale_items si JOIN sales s ON s.id = si.sale_id WHERE s.tenant_id = :tid AND s.created_at >= NOW() - INTERVAL '7 days' GROUP BY service_id ORDER BY COUNT(*) DESC` |
-| "Lucro líquido descontando comissões da semana?" | Query composta: receita − comissões calculadas por barbeiro |
+| "Lucro líquido descontando comissões da semana?" | Query composta: receita − comissões calculadas por profissional |
 | "Quantos assinantes perdi esse mês?" | `SELECT COUNT(*) FROM subscriptions WHERE tenant_id = :tid AND status = 'cancelled' AND DATE_TRUNC('month', updated_at) = DATE_TRUNC('month', NOW())` |
 
 **Segurança:** Acesso restrito via autenticação de número de telefone vinculado ao perfil `OWNER`. Queries sempre filtradas por `tenant_id` para garantir isolamento.
@@ -632,7 +632,7 @@ POST   /auth/logout
 
 ### Tenants
 ```
-POST   /tenants              (signup de nova barbearia)
+POST   /tenants              (signup de novo salão de beleza)
 GET    /tenants/:id
 PUT    /tenants/:id
 ```
@@ -647,12 +647,12 @@ DELETE /customers/:id        (soft delete / anonimização LGPD)
 GET    /customers/:id/history
 ```
 
-### Barbers
+### Professionals
 ```
-GET    /barbers
-POST   /barbers
-PUT    /barbers/:id
-GET    /barbers/:id/availability?date=YYYY-MM-DD
+GET    /professionals
+POST   /professionals
+PUT    /professionals/:id
+GET    /professionals/:id/availability?date=YYYY-MM-DD
 ```
 
 ### Services
@@ -664,7 +664,7 @@ PUT    /services/:id
 
 ### Appointments
 ```
-GET    /appointments         (com filtros: barber_id, date, status)
+GET    /appointments         (com filtros: professional_id, date, status)
 POST   /appointments
 GET    /appointments/:id
 PUT    /appointments/:id
@@ -674,7 +674,7 @@ DELETE /appointments/:id     (cancela)
 ### Sales (PDV)
 ```
 POST   /sales                (cria venda, dispara todos os efeitos colaterais)
-GET    /sales                (com filtros: data, barber_id)
+GET    /sales                (com filtros: data, professional_id)
 GET    /sales/:id
 ```
 
@@ -731,7 +731,7 @@ GET    /analytics/top-services
 
 ### Autenticação e Autorização
 - **JWT Auth** com refresh tokens
-- **Roles:** `OWNER`, `BARBER`, `RECEPTIONIST`, `CUSTOMER` (chatbot)
+- **Roles:** `OWNER`, `PROFESSIONAL`, `RECEPTIONIST`, `CUSTOMER` (chatbot)
 - Cada role tem escopo de acesso restrito a seus endpoints
 
 ### Multi-tenancy
@@ -756,7 +756,7 @@ GET    /analytics/top-services
 ### Milestone Alpha — MVP Core
 - [ ] Auth JWT + Multi-tenant setup
 - [ ] CRUD Clientes e Serviços
-- [ ] CRUD Barbeiros com disponibilidade
+- [ ] CRUD Profissionais com disponibilidade
 - [ ] API de Agendamento com validação de conflito
 - [ ] Motor de retenção básico (manual)
 
@@ -784,7 +784,7 @@ GET    /analytics/top-services
 
 ### Milestone Epsilon — Escala
 - [ ] App mobile para clientes
-- [ ] Marketplace de barbearias (busca geográfica)
+- [ ] Marketplace de salões de beleza (busca geográfica)
 - [ ] Integração com franquias (multi-unidade)
 - [ ] APIs públicas para integrações de terceiros
 
@@ -792,26 +792,26 @@ GET    /analytics/top-services
 
 ## 💰 13. MODELO DE NEGÓCIO
 
-### Monetização da Plataforma (B2B — Barbearia paga o SaaS)
+### Monetização da Plataforma (B2B — Salão paga o SaaS)
 
 | Plano SaaS | Funcionalidades | Público-alvo |
 |---|---|---|
-| **Starter** | Agenda + CRM básico | Barbearia 1 cadeira |
-| **Pro** | Tudo + Financeiro + Estoque + Automações | Barbearias estabelecidas |
-| **Enterprise** | Tudo + Assinaturas + BI + Multi-unidade | Franquias e redes |
+| **Starter** | Agenda + CRM básico | Salão pequeno (1-2 profissionais) |
+| **Pro** | Tudo + Financeiro + Estoque + Automações | Salões estabelecidos |
+| **Enterprise** | Tudo + Assinaturas + BI + Multi-unidade | Franquias e redes de salões |
 
-### Receita da Barbearia (B2C — Cliente da barbearia paga assinatura)
-- A barbearia vende planos de assinatura para seus clientes
-- O BarberFlow facilita a recorrência e cobra taxa sobre o volume processado (modelo marketplace) ou inclui no plano Pro/Enterprise
+### Receita do Salão (B2C — Cliente do salão paga assinatura)
+- O salão vende planos de assinatura para seus clientes
+- O BeautyFlow facilita a recorrência e cobra taxa sobre o volume processado (modelo marketplace) ou inclui no plano Pro/Enterprise
 
 ---
 
 ## 📈 14. ESTRATÉGIA DE ESCALA
 
-- **Nicho inicial:** Barbearias locais independentes
-- **Expansão:** Redes e franquias (multi-unidade, dashboard consolidado)
+- **Nicho inicial:** Salões de beleza independentes
+- **Expansão:** Redes e franquias de salões (multi-unidade, dashboard consolidado)
 - **Expansão geográfica:** Brasil → LATAM
-- **Modelo de indicação:** Barbeiro que indicar novo cliente da plataforma recebe benefício
+- **Modelo de indicação:** Profissional que indicar novo cliente da plataforma recebe benefício
 
 ---
 
@@ -819,12 +819,12 @@ GET    /analytics/top-services
 
 | Termo | Definição |
 |---|---|
-| `tenant_id` | Identificador único da barbearia no sistema multi-tenant |
+| `tenant_id` | Identificador único do salão de beleza no sistema multi-tenant |
 | `MRR` | Monthly Recurring Revenue — receita previsível de assinaturas |
 | `LTV` | Lifetime Value — valor total gerado por um cliente |
 | `past_due` | Status de assinatura com pagamento em atraso |
-| `buffer_time` | Tempo de folga entre atendimentos do barbeiro |
-| `commission_rate` | Percentual de comissão do barbeiro sobre o serviço |
+| `buffer_time` | Tempo de folga entre atendimentos do profissional |
+| `commission_rate` | Percentual de comissão do profissional sobre o serviço |
 | `services_included` | JSONB com mapa de serviços e limites de uso do plano |
 | `external_subscription_id` | ID da assinatura no gateway de pagamento externo |
 | `churn` | Taxa de cancelamento de assinantes no período |
@@ -833,4 +833,4 @@ GET    /analytics/top-services
 
 ---
 
-> **ℹ️ Nota para a IA:** Este documento representa o estado completo e consolidado do sistema BarberFlow. Ao receber perguntas ou tarefas relacionadas a este sistema, considere todos os módulos como interdependentes. Alterações em um módulo (ex: Agendamentos) possuem efeitos em cascata sobre Financeiro, Estoque, CRM e Motor de Retenção. O `tenant_id` é obrigatório em todas as operações de dados. Priorize sempre isolamento de dados, consistência transacional e disparo de eventos ao propor soluções.
+> **ℹ️ Nota para a IA:** Este documento representa o estado completo e consolidado do sistema BeautyFlow. Ao receber perguntas ou tarefas relacionadas a este sistema, considere todos os módulos como interdependentes. Alterações em um módulo (ex: Agendamentos) possuem efeitos em cascata sobre Financeiro, Estoque, CRM e Motor de Retenção. O `tenant_id` é obrigatório em todas as operações de dados. Priorize sempre isolamento de dados, consistência transacional e disparo de eventos ao propor soluções.

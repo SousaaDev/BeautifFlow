@@ -1,6 +1,6 @@
-# BarberFlow Backend
+# BeautyFlow Backend
 
-Backend API for the BarberFlow SaaS application, built with Node.js, Express, TypeScript, and a traditional MVC-like structure.
+Backend API for the BeautyFlow SaaS application, built with Node.js, Express, TypeScript, and a traditional MVC-like structure.
 
 ## Features
 
@@ -50,9 +50,9 @@ src/
 - `POST /api/auth/refresh`
 - `POST /api/auth/logout`
 
-### Tenants (Barbershops)
-- `POST /api/tenants` - Create new barbershop
-- `GET /api/tenants/:id` - Get barbershop details
-- `PUT /api/tenants/:id` - Update barbershop
+### Tenants (Beauty Shops)
+- `POST /api/tenants` - Create new beauty shop
+- `GET /api/tenants/:id` - Get beauty shop details
+- `PUT /api/tenants/:id` - Update beauty shop
 
-See the full documentation in the main BarberFlow document for all endpoints.
+See the full documentation in the main BeautyFlow document for all endpoints.

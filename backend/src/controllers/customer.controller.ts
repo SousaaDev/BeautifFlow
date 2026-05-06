@@ -24,7 +24,7 @@ const updateCustomerSchema = z.object({
   lastVisit: z.string().optional(),
 });
 
-export const createCustomer = async (req: Request, res: Response) => {
+export const store = async (req: Request, res: Response) => {
   try {
     const data = createCustomerSchema.parse(req.body);
     const customer = await createCustomerUseCase.execute({
@@ -44,7 +44,7 @@ export const createCustomer = async (req: Request, res: Response) => {
   }
 };
 
-export const getCustomers = async (req: Request, res: Response) => {
+export const index = async (req: Request, res: Response) => {
   try {
     const filters = {
       tenantId: req.query.tenantId as string | undefined,
@@ -59,7 +59,7 @@ export const getCustomers = async (req: Request, res: Response) => {
   }
 };
 
-export const getCustomer = async (req: Request, res: Response) => {
+export const show = async (req: Request, res: Response) => {
   try {
     const customer = await customerRepository.findById(req.params.id);
     if (!customer) {
@@ -71,7 +71,7 @@ export const getCustomer = async (req: Request, res: Response) => {
   }
 };
 
-export const updateCustomer = async (req: Request, res: Response) => {
+export const update = async (req: Request, res: Response) => {
   try {
     const data = updateCustomerSchema.parse(req.body);
     const customer = await customerRepository.update(req.params.id, {
@@ -90,7 +90,7 @@ export const updateCustomer = async (req: Request, res: Response) => {
   }
 };
 
-export const deleteCustomer = async (req: Request, res: Response) => {
+export const destroy = async (req: Request, res: Response) => {
   try {
     await customerRepository.delete(req.params.id);
     res.status(204).send();

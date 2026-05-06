@@ -1,0 +1,103 @@
+import { Request, Response } from 'express';
+import { z } from 'zod';
+import { pool } from '../database/connection';
+import { ServiceRepositoryImpl } from '../models/ServiceRepositoryImpl';
+
+const createServiceSchema = z.object({
+  tenantId: z.string().uuid(),
+  name: z.string().min(1),
+  durationMinutes: z.number().int().min(1),
+  price: z.number().min(0),
+  commissionRate: z.number().min(0).max(100),
+});
+
+const updateServiceSchema = createServiceSchema.partial();
+
+const serviceParamsSchema = z.object({
+  tenantId: z.string().uuid(),
+  id: z.string().uuid(),
+});
+
+const serviceRepository = new ServiceRepositoryImpl(pool);
+
+export const store = async (req: Request, res: Response) => {
+  try {
+    const data = createServiceSchema.parse(req.body);
+    const service = await serviceRepository.create({
+      ...data,
+      isActive: true,
+    });
+    res.status(201).json(service);
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: error.errors });
+    }
+    res.status(500).json({ error: 'Failed to create service' });
+  }
+};
+
+export const index = async (req: Request, res: Response) => {
+  try {
+    const tenantId = (req.params.tenantId || req.query.tenantId) as string;
+    if (!tenantId) {
+      return res.status(400).json({ error: 'tenantId is required' });
+    }
+    const services = await serviceRepository.findByTenant(tenantId);
+    res.json(services);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch services' });
+  }
+};
+
+export const show = async (req: Request, res: Response) => {
+  try {
+    const { tenantId, id } = serviceParamsSchema.parse(req.params);
+    const service = await serviceRepository.findByTenantAndId(tenantId, id);
+    if (!service) {
+      return res.status(404).json({ error: 'Service not found' });
+    }
+    res.json(service);
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: error.errors });
+    }
+    res.status(500).json({ error: 'Failed to fetch service' });
+  }
+};
+
+export const update = async (req: Request, res: Response) => {
+  try {
+    const { tenantId, id } = serviceParamsSchema.parse(req.params);
+    const data = updateServiceSchema.parse(req.body);
+    
+    const existing = await serviceRepository.findByTenantAndId(tenantId, id);
+    if (!existing) {
+      return res.status(404).json({ error: 'Service not found' });
+    }
+    
+    const updated = await serviceRepository.update(id, data);
+    res.json(updated);
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: error.errors });
+    }
+    res.status(500).json({ error: 'Failed to update service' });
+  }
+};
+
+export const destroy = async (req: Request, res: Response) => {
+  try {
+    const { tenantId, id } = serviceParamsSchema.parse(req.params);
+    const existing = await serviceRepository.findByTenantAndId(tenantId, id);
+    if (!existing) {
+      return res.status(404).json({ error: 'Service not found' });
+    }
+    await serviceRepository.delete(id);
+    res.json({ message: 'Service deleted' });
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: error.errors });
+    }
+    res.status(500).json({ error: 'Failed to delete service' });
+  }
+};

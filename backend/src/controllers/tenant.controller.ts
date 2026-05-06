@@ -14,7 +14,7 @@ const createTenantSchema = z.object({
 const tenantRepository = new TenantRepositoryImpl(pool);
 const createTenantUseCase = new CreateTenant(tenantRepository);
 
-export const createTenant = async (req: Request, res: Response) => {
+export const store = async (req: Request, res: Response) => {
   try {
     const data = createTenantSchema.parse(req.body);
     const tenant = await createTenantUseCase.execute(data);
@@ -28,7 +28,7 @@ export const createTenant = async (req: Request, res: Response) => {
   }
 };
 
-export const getTenant = async (req: Request, res: Response) => {
+export const show = async (req: Request, res: Response) => {
   const { id } = req.params;
   try {
     const tenant = await tenantRepository.findById(id);
@@ -48,7 +48,7 @@ const updateTenantSchema = z.object({
   trialEndsAt: z.string().optional(),
 });
 
-export const updateTenant = async (req: Request, res: Response) => {
+export const update = async (req: Request, res: Response) => {
   const { id } = req.params;
   try {
     const data = updateTenantSchema.parse(req.body);
@@ -67,7 +67,7 @@ export const updateTenant = async (req: Request, res: Response) => {
   }
 };
 
-export const deleteTenant = async (req: Request, res: Response) => {
+export const destroy = async (req: Request, res: Response) => {
   const { id } = req.params;
   try {
     await tenantRepository.delete(id);
