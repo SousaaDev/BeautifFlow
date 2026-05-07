@@ -5,6 +5,7 @@ import { AppointmentRepositoryImpl } from '../models/AppointmentRepositoryImpl';
 import { CustomerRepositoryImpl } from '../models/CustomerRepositoryImpl';
 import { ProfessionalRepositoryImpl } from '../models/ProfessionalRepositoryImpl';
 import { ServiceRepositoryImpl } from '../models/ServiceRepositoryImpl';
+import { AutomationEngine } from '../services/AutomationEngine';
 
 const createAppointmentSchema = z.object({
   tenantId: z.string().uuid(),
@@ -41,6 +42,7 @@ const appointmentRepository = new AppointmentRepositoryImpl(pool);
 const customerRepository = new CustomerRepositoryImpl(pool);
 const serviceRepository = new ServiceRepositoryImpl(pool);
 const profRepository = new ProfessionalRepositoryImpl(pool);
+const automationEngine = new AutomationEngine();
 
 export const store = async (req: Request, res: Response) => {
   try {
@@ -195,6 +197,13 @@ export const update = async (req: Request, res: Response) => {
     }
     
     const updated = await appointmentRepository.update(id, data);
+
+    if (data.status === 'completed' && existing.status !== 'completed') {
+      automationEngine.runForAppointmentCompleted(tenantId, id).catch(error => {
+        console.error('Automation execution failed for appointment completion:', error);
+      });
+    }
+
     res.json(updated);
   } catch (error) {
     if (error instanceof z.ZodError) {
