@@ -7,4 +7,5 @@ export interface Customer {
   tags?: string[];
   lastVisit?: Date;
   createdAt: Date;
+  deletedAt?: Date; // Soft delete field for LGPD compliance
 }

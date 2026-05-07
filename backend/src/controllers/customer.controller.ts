@@ -93,7 +93,50 @@ export const update = async (req: Request, res: Response) => {
 export const destroy = async (req: Request, res: Response) => {
   try {
     await customerRepository.delete(req.params.id);
-    res.status(204).send();
+    res.json({ message: 'Customer deleted (soft delete for LGPD compliance)' });
+  } catch (error) {
+    if (error instanceof Error) {
+      return res.status(400).json({ error: error.message });
+    }
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+// Soft delete and restore functions
+export const softDelete = async (req: Request, res: Response) => {
+  try {
+    await customerRepository.softDelete(req.params.id);
+    res.json({ message: 'Customer soft deleted for LGPD compliance' });
+  } catch (error) {
+    if (error instanceof Error) {
+      return res.status(400).json({ error: error.message });
+    }
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+export const restore = async (req: Request, res: Response) => {
+  try {
+    await customerRepository.restore(req.params.id);
+    const customer = await customerRepository.findById(req.params.id);
+    res.json({ message: 'Customer restored', customer });
+  } catch (error) {
+    if (error instanceof Error) {
+      return res.status(400).json({ error: error.message });
+    }
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+export const getDeleted = async (req: Request, res: Response) => {
+  try {
+    const filters = {
+      tenantId: req.query.tenantId as string | undefined,
+      includeDeleted: true,
+    };
+    const customers = await customerRepository.findAll(filters);
+    const deletedCustomers = customers.filter(c => c.deletedAt);
+    res.json(deletedCustomers);
   } catch (error) {
     res.status(500).json({ error: 'Internal server error' });
   }

@@ -9,6 +9,7 @@ import appointmentRoutes from './appointment.routes';
 import saleRoutes from './sale.routes';
 import automationRoutes from './automation.routes';
 import analyticsRoutes from './analytics.routes';
+import loyaltyRoutes from './loyalty.routes';
 
 export const setupRoutes = (app: Express) => {
   app.get('/', (_req, res) => {
@@ -25,4 +26,5 @@ export const setupRoutes = (app: Express) => {
   app.use('/api/tenants/:tenantId/sales', saleRoutes);
   app.use('/api/automations', automationRoutes);
   app.use('/api/analytics', analyticsRoutes);
+  app.use('/api/tenants/:tenantId', loyaltyRoutes);
 };

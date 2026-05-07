@@ -53,6 +53,11 @@ export class CustomerRepositoryImpl implements CustomerRepository {
       conditions.push(`last_visit <= $${values.length}`);
     }
 
+    // Soft delete filter - only show non-deleted customers unless explicitly requested
+    if (!filters.includeDeleted) {
+      conditions.push('deleted_at IS NULL');
+    }
+
     const whereClause = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
     const query = `SELECT * FROM customers ${whereClause} ORDER BY created_at DESC`;
     const result = await this.pool.query(query, values);
@@ -105,8 +110,24 @@ export class CustomerRepositoryImpl implements CustomerRepository {
   }
 
   async delete(id: string): Promise<void> {
-    const query = 'DELETE FROM customers WHERE id = $1';
-    await this.pool.query(query, [id]);
+    // LGPD compliant: use soft delete by default
+    await this.softDelete(id);
+  }
+
+  async softDelete(id: string): Promise<void> {
+    const query = 'UPDATE customers SET deleted_at = NOW() WHERE id = $1 AND deleted_at IS NULL';
+    const result = await this.pool.query(query, [id]);
+    if (result.rowCount === 0) {
+      throw new Error('Customer not found or already deleted');
+    }
+  }
+
+  async restore(id: string): Promise<void> {
+    const query = 'UPDATE customers SET deleted_at = NULL WHERE id = $1';
+    const result = await this.pool.query(query, [id]);
+    if (result.rowCount === 0) {
+      throw new Error('Customer not found');
+    }
   }
 
   private mapRowToCustomer(row: any): Customer {
@@ -119,6 +140,7 @@ export class CustomerRepositoryImpl implements CustomerRepository {
       tags: row.tags,
       lastVisit: row.last_visit,
       createdAt: row.created_at,
+      deletedAt: row.deleted_at,
     };
   }
 }

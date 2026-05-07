@@ -6,6 +6,7 @@ import { CustomerRepositoryImpl } from '../models/CustomerRepositoryImpl';
 import { ProfessionalRepositoryImpl } from '../models/ProfessionalRepositoryImpl';
 import { ServiceRepositoryImpl } from '../models/ServiceRepositoryImpl';
 import { AutomationEngine } from '../services/AutomationEngine';
+import { redisClient } from '../infrastructure/redis';
 
 const createAppointmentSchema = z.object({
   tenantId: z.string().uuid(),
@@ -44,8 +45,130 @@ const serviceRepository = new ServiceRepositoryImpl(pool);
 const profRepository = new ProfessionalRepositoryImpl(pool);
 const automationEngine = new AutomationEngine();
 
+// Enhanced conflict validation with buffer time and working hours
+const validateAppointmentConflicts = async (
+  tenantId: string,
+  professionalId: string,
+  customerId: string,
+  startTime: Date,
+  endTime: Date,
+  serviceDuration: number,
+  bufferMinutes: number,
+  excludeAppointmentId?: string
+): Promise<{ isValid: boolean; errors: string[]; conflicts: any[] }> => {
+  const errors: string[] = [];
+  const conflicts: any[] = [];
+
+  // 1. Validate basic time logic
+  if (startTime >= endTime) {
+    errors.push('Start time must be before end time');
+    return { isValid: false, errors, conflicts };
+  }
+
+  // 2. Validate service duration matches appointment duration
+  const appointmentDuration = (endTime.getTime() - startTime.getTime()) / (1000 * 60);
+  if (Math.abs(appointmentDuration - serviceDuration) > 1) { // Allow 1 minute tolerance
+    errors.push(`Appointment duration (${appointmentDuration}min) doesn't match service duration (${serviceDuration}min)`);
+  }
+
+  // 3. Check working hours (professional and salon)
+  const dayOfWeek = startTime.toLocaleDateString('en-US', { weekday: 'short' }).toLowerCase();
+  const professional = await profRepository.findByTenantAndId(tenantId, professionalId);
+
+  if (professional?.workingHours?.[dayOfWeek]) {
+    const workingHours = professional.workingHours[dayOfWeek];
+    if (!workingHours.isWorking) {
+      errors.push(`Professional is not working on ${dayOfWeek}`);
+    } else {
+      const workStart = new Date(startTime);
+      const workEnd = new Date(startTime);
+      const [startHour, startMin] = workingHours.start.split(':').map(Number);
+      const [endHour, endMin] = workingHours.end.split(':').map(Number);
+
+      workStart.setHours(startHour, startMin, 0, 0);
+      workEnd.setHours(endHour, endMin, 0, 0);
+
+      if (startTime < workStart || endTime > workEnd) {
+        errors.push(`Appointment time (${startTime.toLocaleTimeString()} - ${endTime.toLocaleTimeString()}) is outside professional working hours (${workingHours.start} - ${workingHours.end})`);
+      }
+    }
+  }
+
+  // 4. Check buffer time conflicts (including preparation/cleanup time)
+  const bufferMs = bufferMinutes * 60 * 1000;
+  const checkStart = new Date(startTime.getTime() - bufferMs);
+  const checkEnd = new Date(endTime.getTime() + bufferMs);
+
+  const appointmentConflicts = await appointmentRepository.findConflicts(
+    tenantId,
+    professionalId,
+    checkStart,
+    checkEnd,
+    excludeAppointmentId
+  );
+
+  if (appointmentConflicts.length > 0) {
+    conflicts.push(...appointmentConflicts);
+    errors.push(`Time slot conflicts with ${appointmentConflicts.length} existing appointment(s) (including ${bufferMinutes}min buffer)`);
+  }
+
+  // 5. Check if customer has overlapping appointments
+  const customerConflicts = await appointmentRepository.findByCustomer(tenantId, customerId);
+  const overlappingCustomerAppointments = customerConflicts.filter(apt => {
+    if (excludeAppointmentId && apt.id === excludeAppointmentId) return false;
+    const aptStart = new Date(apt.startTime);
+    const aptEnd = new Date(apt.endTime);
+    return (startTime < aptEnd && endTime > aptStart);
+  });
+
+  if (overlappingCustomerAppointments.length > 0) {
+    conflicts.push(...overlappingCustomerAppointments);
+    errors.push('Customer has overlapping appointments');
+  }
+
+  // 6. Check for appointments too close together (minimum 15min gap without buffer)
+  const professionalAppointments = await appointmentRepository.findByProfessional(tenantId, professionalId);
+  const sameDayAppointments = professionalAppointments.filter(apt => {
+    const aptDate = new Date(apt.startTime);
+    return aptDate.toDateString() === startTime.toDateString();
+  });
+
+  const minGapMs = 15 * 60 * 1000; // 15 minutes minimum gap
+  for (const apt of sameDayAppointments) {
+    if (excludeAppointmentId && apt.id === excludeAppointmentId) continue;
+
+    const aptStart = new Date(apt.startTime);
+    const aptEnd = new Date(apt.endTime);
+
+    // Check if appointment is too close before or after
+    const timeDiffBefore = Math.abs(startTime.getTime() - aptEnd.getTime());
+    const timeDiffAfter = Math.abs(endTime.getTime() - aptStart.getTime());
+
+    if (timeDiffBefore < minGapMs || timeDiffAfter < minGapMs) {
+      conflicts.push(apt);
+      errors.push('Appointments must have at least 15 minutes gap between them');
+      break;
+    }
+  }
+
+  return {
+    isValid: errors.length === 0,
+    errors,
+    conflicts
+  };
+};
+
 export const store = async (req: Request, res: Response) => {
+  const lockKey = `lock:appointment:${req.body.professionalId}:${new Date(req.body.startTime).toISOString()}`;
+  let lockId: string | null = null;
+
   try {
+    // Adquirir lock distribuído para evitar double-booking
+    lockId = await redisClient.acquireLock(lockKey, 10);
+    if (!lockId) {
+      return res.status(409).json({ error: 'Time slot being booked by another user, please try again' });
+    }
+
     const data = createAppointmentSchema.parse(req.body);
     const startTime = new Date(data.startTime);
     const endTime = new Date(data.endTime);
@@ -72,25 +195,26 @@ export const store = async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'Professional not found' });
     }
 
-    // Validação 4: Verificar conflito de slot (com buffer time)
-    const bufferMs = professional.bufferMinutes * 60 * 1000;
-    const adjustedStartTime = new Date(startTime.getTime() - bufferMs);
-    const adjustedEndTime = new Date(endTime.getTime() + bufferMs);
-
-    const conflicts = await appointmentRepository.findConflicts(
+    // Validação 4: Verificar conflitos robustos com buffer time e working hours
+    const validation = await validateAppointmentConflicts(
       data.tenantId,
       data.professionalId,
-      adjustedStartTime,
-      adjustedEndTime
+      data.customerId,
+      startTime,
+      endTime,
+      service.durationMinutes,
+      professional.bufferMinutes
     );
 
-    if (conflicts.length > 0) {
+    if (!validation.isValid) {
       return res.status(409).json({
-        error: 'Time slot not available',
-        conflicts: conflicts.map(c => ({
+        error: 'Appointment validation failed',
+        details: validation.errors,
+        conflicts: validation.conflicts.map(c => ({
           id: c.id,
           startTime: c.startTime,
           endTime: c.endTime,
+          customerName: c.customerName,
         })),
       });
     }
@@ -135,6 +259,11 @@ export const store = async (req: Request, res: Response) => {
     }
     console.error('Error creating appointment:', error);
     res.status(500).json({ error: 'Failed to create appointment' });
+  } finally {
+    // Liberar lock distribuído
+    if (lockId) {
+      await redisClient.releaseLock(lockKey, lockId);
+    }
   }
 };
 

@@ -5,6 +5,7 @@ export interface Professional {
   phone?: string;
   commissionRate: number;
   bufferMinutes: number;
+  workingHours?: Record<string, { isWorking: boolean; start: string; end: string }>; // day -> working hours
   isActive: boolean;
   createdAt: Date;
 }

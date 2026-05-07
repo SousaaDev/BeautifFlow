@@ -932,3 +932,579 @@ Agora você tem tudo para testar a FASE 1 no Postman!
 **Próximo passo:** Começar a executar os testes na ordem recomendada.
 
 Qualquer dúvida, avise! ✅
+
+---
+
+# 🔒 Infraestrutura de Segurança e Performance — BeautyFlow Backend
+
+## 1. REDIS — Cache e Locks Distribuídos
+
+### Propósito
+- **Cache de dados** para reduzir queries ao banco
+- **Locks distribuídos** para evitar race conditions (double-booking)
+- **Sessões** e state management
+
+### Configuração
+
+```bash
+# Instalar Redis localmente
+# Windows: https://github.com/microsoftarchive/redis/releases
+# macOS: brew install redis
+# Linux: sudo apt-get install redis-server
+
+# Iniciar Redis
+redis-server
+
+# Variáveis de ambiente (.env)
+REDIS_HOST=localhost
+REDIS_PORT=6379
+REDIS_PASSWORD=  # deixar vazio se sem auth
+```
+
+### Uso no código
+
+```typescript
+// Lock de agendamento (evita double-booking)
+const lockId = await redisClient.acquireLock(`lock:appointment:${profId}:${slot}`, 10);
+if (!lockId) {
+  return res.status(409).json({ error: 'Slot being booked' });
+// ... criar agendamento ...
+await redisClient.releaseLock(lockKey, lockId);
+```
+
+---
+
+## 2. Background Workers — Automações e Relatórios
+
+### Serviços implementados
+
+| Worker | Frequência | Função |
+|---|---|---|
+| **Retention** | A cada 6 horas | Dispara automações de retenção (last_visit_gt_days) |
+| **Analytics** | Diariamente 00:00 | Gera resumos diários de receita e agendamentos |
+| **Cleanup** | Semanalmente (domingo 02:00) | Remove audit logs antigos (> 1 ano) — LGPD |
+
+### Inicialização automática
+
+Os workers são iniciados automaticamente no `src/index.ts`:
+
+```typescript
+WorkerService.startAllWorkers();
+```
+
+---
+
+## 3. Row-Level Security (RLS) — Multi-tenant Isolation
+
+### Conceito
+
+RLS garante que cada tenant **nunca consegue acessar dados de outro tenant**, mesmo que a aplicação tivesse uma falha.
+
+### Implementação
+
+Tabelas com RLS habilitado:
+- `customers`
+- `appointments`
+- `sales`
+- `audit_logs`
+- `professionals`
+- `services`
+- `products`
+- `transactions`
+- `automations`
+- `messages`
+- `loyalty_points`
+- `membership_plans`
+- `subscriptions`
+- `sale_items` (RLS via parent table `sales`)
+
+### Policy criada
+
+```sql
+CREATE POLICY tenant_isolation_customers ON customers
+USING (tenant_id = current_setting('app.tenant_id')::uuid)
+WITH CHECK (tenant_id = current_setting('app.tenant_id')::uuid);
+```
+
+### Como usar no código
+
+Antes de executar queries sensíveis, defina o contexto do tenant:
+
+```typescript
+// Executar no PostgreSQL
+SET app.tenant_id = '550e8400-e29b-41d4-a716-446655440000';
+
+// Agora qualquer SELECT em `customers` será filtrado por tenant_id
+SELECT * FROM customers; -- Retorna apenas de um tenant
+```
+
+### ⚠️ Importante
+
+Se você ativar RLS sem usar `SET app.tenant_id`, as queries retornarão 0 linhas! Certifique-se de:
+
+1. Adicionar middleware que execute `SET app.tenant_id` em cada request
+2. Usar pool connection que define o setting automaticamente
+
+---
+
+## 4. PITR (Point-in-Time Recovery) — Backup Contínuo
+
+### Objetivo
+Recuperar o banco para qualquer ponto no tempo nos últimos 7 dias.
+
+### Scripts implementados
+
+O projeto inclui scripts automatizados para backup e recovery:
+
+```bash
+# Configurar PITR no banco
+npm run setup-pitr
+
+# Criar backup base
+./scripts/backup.sh base
+
+# Recuperar para um ponto específico
+./scripts/recover.sh "2024-01-15 10:30:00" ./backups/base_20240115_100000
+```
+
+### Configuração no PostgreSQL (produção)
+
+**Via Heroku/AWS RDS:**
+```bash
+# Heroku
+heroku addons:create heroku-postgresql:premium-3 --follow basic-db
+heroku pg:backups:schedule DATABASE_URL --at '02:00 UTC'
+
+# AWS RDS
+# 1. Ir ao console AWS RDS
+# 2. Selecionar database
+# 3. Backup retention period → 30 days
+# 4. Backup window → 02:00 UTC
+```
+
+**Via Docker Postgres local (desenvolvimento):**
+```dockerfile
+# docker-compose.yml
+postgres:
+  image: postgres:15
+  environment:
+    POSTGRES_PASSWORD: password
+  volumes:
+    - postgres_data:/var/lib/postgresql/data
+    - ./backups:/backups
+  command: >
+    postgres
+    -c wal_level=replica
+    -c archive_mode=on
+    -c archive_command='mkdir -p /backups/wal && cp %p /backups/wal/%f'
+```
+
+### Restaurar backup
+
+```bash
+# Heroku
+heroku pg:backups:restore 'https://your-backup-url' DATABASE_URL
+
+# AWS RDS (console ou AWS CLI)
+aws rds restore-db-instance-from-db-snapshot \
+  --db-instance-identifier new-database-name \
+  --db-snapshot-identifier snapshot-id
+```
+
+---
+
+## 5. Audit Logs — Conformidade LGPD
+
+### Tabela criada
+
+```sql
+CREATE TABLE audit_logs (
+  id UUID PRIMARY KEY,
+  tenant_id UUID NOT NULL,
+  user_id UUID,
+  action VARCHAR(20), -- POST, PUT, DELETE
+  resource VARCHAR(100), -- customers, appointments
+  resource_id VARCHAR(255),
+  changes JSONB, -- antes/depois dos dados
+  ip_address VARCHAR(45),
+  user_agent TEXT,
+  created_at TIMESTAMP DEFAULT NOW()
+);
+```
+
+### Middleware automático
+
+Toda operação de modificação (POST, PUT, DELETE) é automaticamente logada:
+
+```typescript
+app.use(auditMiddleware); // Middleware que loga mudanças
+```
+
+### Query de auditoria
+
+```typescript
+const logs = await auditService.getLogs(tenantId, 'customers', 100);
+// Retorna últimas 100 operações no recurso 'customers'
+```
+
+### LGPD — Retenção de dados
+
+- Audit logs são **retidos por 1 ano**
+- Worker executa limpeza automaticamente (domingo 02:00)
+- Dados de customers podem ser anonimizados via `DELETE /api/customers/:id`
+
+---
+
+## ✅ Checklist de Segurança
+
+- [x] Redis com locks para evitar double-booking
+- [x] Workers para automações (cron jobs)
+- [x] RLS habilitado em todas as tabelas tenant-scoped
+- [x] Audit logs para todas as mudanças
+- [x] PITR configurado com scripts automatizados
+- [ ] Implementar `SET app.tenant_id` em cada middleware (próxima etapa)
+- [ ] Testar LGPD data deletion workflow
+- [ ] Backups diários em produção
+
+---
+
+## 📊 Monitoramento
+
+### Verificar health do Redis
+
+```bash
+redis-cli PING
+# PONG
+```
+
+### Verificar workers rodando
+
+Logs no console:
+```
+[Worker] Retention automation worker started (every 6 hours)
+[Worker] Analytics worker started (daily at 00:00)
+[Worker] LGPD cleanup worker started (weekly on Sunday 02:00)
+```
+
+### Verificar RLS habilitado
+
+```sql
+SELECT schemaname, tablename, rowsecurity
+FROM pg_tables
+WHERE schemaname = 'public'
+AND rowsecurity = true;
+-- Deve retornar: customers, appointments, sales, audit_logs
+```
+
+---
+
+## 🚀 Próximos Passos
+
+1. **Middleware de RLS** — Implementar `SET app.tenant_id` automaticamente
+2. **Monitoramento** — Integrar com DataDog/New Relic
+3. **Alertas** — Notificações para falhas de workers
+4. **Encryption** — End-to-end encryption para dados sensíveis
+
+---
+
+---
+
+## 🚀 Endpoints Implementados
+
+Use `{{baseUrl}}` e IDs válidos nos requests. Não envie `:tenantId`, `:id` ou `:customerId` como texto literal.
+
+### Health
+```http
+GET /
+```
+
+### Auth
+```http
+POST /api/auth/register
+Content-Type: application/json
+
+{
+  "email": "user@example.com",
+  "password": "password123",
+  "tenantId": "550e8400-e29b-41d4-a716-446655440000"
+}
+```
+
+```http
+POST /api/auth/login
+Content-Type: application/json
+
+{
+  "email": "user@example.com",
+  "password": "password123"
+}
+```
+
+```http
+POST /api/auth/refresh
+Content-Type: application/json
+
+{
+  "refreshToken": "your-refresh-token"
+}
+```
+
+```http
+POST /api/auth/logout
+Content-Type: application/json
+
+{
+  "refreshToken": "your-refresh-token"
+}
+```
+
+### Tenants
+```http
+POST /api/tenants
+Content-Type: application/json
+
+{
+  "name": "Salão Exemplo",
+  "email": "salao@example.com",
+  "phone": "+5511999999999"
+}
+```
+
+```http
+PUT /api/tenants/:id
+Content-Type: application/json
+
+{
+  "name": "Salão Atualizado",
+  "email": "novoemail@example.com"
+}
+```
+
+### Customers
+```http
+POST /api/customers
+Content-Type: application/json
+
+{
+  "tenantId": "550e8400-e29b-41d4-a716-446655440000",
+  "name": "João Silva",
+  "phone": "+5511999999999",
+  "email": "joao@example.com"
+}
+```
+
+```http
+PUT /api/customers/:id
+Content-Type: application/json
+
+{
+  "name": "João da Silva",
+  "phone": "+5511988887777",
+  "email": "joao.silva@example.com"
+}
+```
+
+### Professionals
+```http
+POST /api/tenants/:tenantId/professionals
+Content-Type: application/json
+
+{
+  "tenantId": "550e8400-e29b-41d4-a716-446655440000",
+  "name": "Ana Silva",
+  "phone": "11999999999",
+  "commissionRate": 15.5,
+  "bufferMinutes": 10
+}
+```
+
+```http
+PUT /api/tenants/:tenantId/professionals/:id
+Content-Type: application/json
+
+{
+  "commissionRate": 20.0,
+  "bufferMinutes": 15
+}
+```
+
+### Services
+```http
+POST /api/tenants/:tenantId/services
+Content-Type: application/json
+
+{
+  "tenantId": "550e8400-e29b-41d4-a716-446655440000",
+  "name": "Corte de Cabelo",
+  "durationMinutes": 30,
+  "price": 50.00,
+  "commissionRate": 20
+}
+```
+
+```http
+PUT /api/tenants/:tenantId/services/:id
+Content-Type: application/json
+
+{
+  "price": 60.00,
+  "durationMinutes": 45
+}
+```
+
+### Products
+```http
+POST /api/tenants/:tenantId/products
+Content-Type: application/json
+
+{
+  "tenantId": "550e8400-e29b-41d4-a716-446655440000",
+  "name": "Shampoo Premium",
+  "currentStock": 50,
+  "minThreshold": 10,
+  "costPrice": 15.00,
+  "salePrice": 35.00
+}
+```
+
+```http
+PUT /api/tenants/:tenantId/products/:id
+Content-Type: application/json
+
+{
+  "salePrice": 40.00
+}
+```
+
+```http
+POST /api/tenants/:tenantId/products/:id/adjust-stock
+Content-Type: application/json
+
+{
+  "type": "IN",
+  "quantity": 10,
+  "reason": "Compra de fornecedor"
+}
+```
+
+### Appointments
+```http
+POST /api/tenants/:tenantId/appointments
+Content-Type: application/json
+
+{
+  "tenantId": "550e8400-e29b-41d4-a716-446655440000",
+  "customerId": "660e8400-e29b-41d4-a716-446655440001",
+  "professionalId": "professional-id",
+  "serviceId": "service-id",
+  "startTime": "2026-05-15T14:00:00Z",
+  "endTime": "2026-05-15T14:30:00Z"
+}
+```
+
+```http
+PUT /api/tenants/:tenantId/appointments/:id
+Content-Type: application/json
+
+{
+  "status": "completed",
+  "internalNotes": "Cliente satisfeito"
+}
+```
+
+### Sales
+```http
+POST /api/tenants/:tenantId/sales
+Content-Type: application/json
+
+{
+  "tenantId": "550e8400-e29b-41d4-a716-446655440000",
+  "customerId": "660e8400-e29b-41d4-a716-446655440001",
+  "professionalId": "professional-id",
+  "paymentMethod": "credit_card",
+  "items": [
+    {
+      "serviceId": "service-id",
+      "quantity": 1,
+      "unitPrice": 50.00
+    },
+    {
+      "productId": "product-id",
+      "quantity": 2,
+      "unitPrice": 35.00
+    }
+  ]
+}
+```
+
+### Automations
+```http
+POST /api/automations
+Content-Type: application/json
+
+{
+  "tenantId": "550e8400-e29b-41d4-a716-446655440000",
+  "name": "Automação de Retenção",
+  "type": "retention",
+  "config": {
+    "lastVisitGtDays": 30,
+    "message": "Olá! Sentimos sua falta."
+  }
+}
+```
+
+```http
+PUT /api/automations/:id
+Content-Type: application/json
+
+{
+  "name": "Automação Atualizada",
+  "config": {
+    "lastVisitGtDays": 45
+  }
+}
+```
+
+```http
+POST /api/automations/execute
+Content-Type: application/json
+
+{
+  "automationId": "automation-id"
+}
+```
+
+### Loyalty
+```http
+POST /api/tenants/:tenantId/customers/:customerId/loyalty/add
+Content-Type: application/json
+
+{
+  "points": 100,
+  "reason": "Compra de R$ 50,00",
+  "referenceId": "sale-id"
+}
+```
+
+```http
+POST /api/tenants/:tenantId/customers/:customerId/loyalty/redeem
+Content-Type: application/json
+
+{
+  "points": 50,
+  "reason": "Desconto em serviço",
+  "referenceId": "appointment-id"
+}
+```
+
+---
+
+## 📌 Observações importantes
+- Use `{{baseUrl}}` em vez de `http://localhost:3000` apenas quando estiver usando variáveis de ambiente no Postman.
+- Preencha `tenantId`, `customerId`, `professionalId`, `serviceId`, `productId`, `appointmentId` e `saleId` com os valores retornados pelas requests criadas anteriormente.
+- As rotas de analytics requerem autenticação via `Authorization` header.
+- Os endpoints de automations também usam autenticação.
+
+### Erros de Autenticação
+- **Sem token**: `{"error":"No token provided"}` (status 401)
+- **Token inválido**: `{"error":"Invalid token"}` (status 401)

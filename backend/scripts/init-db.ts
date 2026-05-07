@@ -203,17 +203,31 @@ const createTables = async () => {
       );
     `);
 
-    // Create subscriptions table
+    // Create loyalty_transactions table
     await pool.query(`
-      CREATE TABLE IF NOT EXISTS subscriptions (
+      CREATE TABLE IF NOT EXISTS loyalty_transactions (
         id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
         customer_id UUID NOT NULL REFERENCES customers(id),
         tenant_id UUID NOT NULL REFERENCES beauty_shops(id),
-        plan_id UUID NOT NULL REFERENCES membership_plans(id),
-        status VARCHAR(20) CHECK (status IN ('active', 'past_due', 'cancelled', 'trialing')),
-        current_period_start TIMESTAMP,
-        current_period_end TIMESTAMP,
-        external_subscription_id VARCHAR(255),
+        type VARCHAR(10) NOT NULL CHECK (type IN ('EARNED', 'REDEEMED')),
+        points INTEGER NOT NULL,
+        reason VARCHAR(255),
+        reference_id UUID,
+        created_at TIMESTAMP DEFAULT NOW()
+      );
+    `);
+
+    // Create stock_movements table
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS stock_movements (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        tenant_id UUID NOT NULL REFERENCES beauty_shops(id),
+        product_id UUID NOT NULL REFERENCES products(id),
+        type VARCHAR(15) NOT NULL CHECK (type IN ('IN', 'OUT', 'ADJUSTMENT')),
+        quantity INTEGER NOT NULL,
+        reason TEXT,
+        reference_id UUID,
+        created_by UUID,
         created_at TIMESTAMP DEFAULT NOW()
       );
     `);
@@ -250,9 +264,170 @@ const createTables = async () => {
       CREATE INDEX IF NOT EXISTS idx_subscriptions_customer ON subscriptions(customer_id);
       CREATE INDEX IF NOT EXISTS idx_messages_tenant ON messages(tenant_id);
       CREATE INDEX IF NOT EXISTS idx_automations_tenant ON automations(tenant_id);
+      CREATE INDEX IF NOT EXISTS idx_loyalty_transactions_customer ON loyalty_transactions(customer_id);
+      CREATE INDEX IF NOT EXISTS idx_loyalty_transactions_tenant ON loyalty_transactions(tenant_id);
+      CREATE INDEX IF NOT EXISTS idx_stock_movements_product ON stock_movements(product_id);
+      CREATE INDEX IF NOT EXISTS idx_stock_movements_tenant ON stock_movements(tenant_id);
     `);
 
-    console.log('Database tables and indexes created successfully');
+    // Create audit logs table
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS audit_logs (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        tenant_id UUID NOT NULL REFERENCES beauty_shops(id),
+        user_id UUID,
+        action VARCHAR(20),
+        resource VARCHAR(100),
+        resource_id VARCHAR(255),
+        changes JSONB,
+        ip_address VARCHAR(45),
+        user_agent TEXT,
+        created_at TIMESTAMP DEFAULT NOW()
+      );
+    `);
+
+    await pool.query(`
+      CREATE INDEX IF NOT EXISTS idx_audit_logs_tenant ON audit_logs(tenant_id);
+      CREATE INDEX IF NOT EXISTS idx_audit_logs_resource ON audit_logs(resource);
+      CREATE INDEX IF NOT EXISTS idx_audit_logs_created ON audit_logs(created_at);
+    `);
+
+    // Enable Row-Level Security (RLS) on all tenant-scoped tables
+    await pool.query(`ALTER TABLE customers ENABLE ROW LEVEL SECURITY;`);
+    await pool.query(`ALTER TABLE appointments ENABLE ROW LEVEL SECURITY;`);
+    await pool.query(`ALTER TABLE sales ENABLE ROW LEVEL SECURITY;`);
+    await pool.query(`ALTER TABLE audit_logs ENABLE ROW LEVEL SECURITY;`);
+    await pool.query(`ALTER TABLE professionals ENABLE ROW LEVEL SECURITY;`);
+    await pool.query(`ALTER TABLE services ENABLE ROW LEVEL SECURITY;`);
+    await pool.query(`ALTER TABLE products ENABLE ROW LEVEL SECURITY;`);
+    await pool.query(`ALTER TABLE transactions ENABLE ROW LEVEL SECURITY;`);
+    await pool.query(`ALTER TABLE automations ENABLE ROW LEVEL SECURITY;`);
+    await pool.query(`ALTER TABLE messages ENABLE ROW LEVEL SECURITY;`);
+    await pool.query(`ALTER TABLE loyalty_points ENABLE ROW LEVEL SECURITY;`);
+    await pool.query(`ALTER TABLE membership_plans ENABLE ROW LEVEL SECURITY;`);
+    await pool.query(`ALTER TABLE subscriptions ENABLE ROW LEVEL SECURITY;`);
+    await pool.query(`ALTER TABLE sale_items ENABLE ROW LEVEL SECURITY;`);
+    await pool.query(`ALTER TABLE loyalty_transactions ENABLE ROW LEVEL SECURITY;`);
+    await pool.query(`ALTER TABLE stock_movements ENABLE ROW LEVEL SECURITY;`);
+
+    // Create RLS policies for multi-tenant isolation
+    // Customers RLS: each tenant can only see their own customers
+    await pool.query(`
+      CREATE POLICY tenant_isolation_customers ON customers
+      USING (tenant_id = current_setting('app.tenant_id')::uuid)
+      WITH CHECK (tenant_id = current_setting('app.tenant_id')::uuid);
+    `).catch(() => {}); // Ignore if policy already exists
+
+    // Appointments RLS
+    await pool.query(`
+      CREATE POLICY tenant_isolation_appointments ON appointments
+      USING (tenant_id = current_setting('app.tenant_id')::uuid)
+      WITH CHECK (tenant_id = current_setting('app.tenant_id')::uuid);
+    `).catch(() => {});
+
+    // Sales RLS
+    await pool.query(`
+      CREATE POLICY tenant_isolation_sales ON sales
+      USING (tenant_id = current_setting('app.tenant_id')::uuid)
+      WITH CHECK (tenant_id = current_setting('app.tenant_id')::uuid);
+    `).catch(() => {});
+
+    // Audit Logs RLS
+    await pool.query(`
+      CREATE POLICY tenant_isolation_audit ON audit_logs
+      USING (tenant_id = current_setting('app.tenant_id')::uuid)
+      WITH CHECK (tenant_id = current_setting('app.tenant_id')::uuid);
+    `).catch(() => {});
+
+    // Professionals RLS
+    await pool.query(`
+      CREATE POLICY tenant_isolation_professionals ON professionals
+      USING (tenant_id = current_setting('app.tenant_id')::uuid)
+      WITH CHECK (tenant_id = current_setting('app.tenant_id')::uuid);
+    `).catch(() => {});
+
+    // Services RLS
+    await pool.query(`
+      CREATE POLICY tenant_isolation_services ON services
+      USING (tenant_id = current_setting('app.tenant_id')::uuid)
+      WITH CHECK (tenant_id = current_setting('app.tenant_id')::uuid);
+    `).catch(() => {});
+
+    // Products RLS
+    await pool.query(`
+      CREATE POLICY tenant_isolation_products ON products
+      USING (tenant_id = current_setting('app.tenant_id')::uuid)
+      WITH CHECK (tenant_id = current_setting('app.tenant_id')::uuid);
+    `).catch(() => {});
+
+    // Transactions RLS
+    await pool.query(`
+      CREATE POLICY tenant_isolation_transactions ON transactions
+      USING (tenant_id = current_setting('app.tenant_id')::uuid)
+      WITH CHECK (tenant_id = current_setting('app.tenant_id')::uuid);
+    `).catch(() => {});
+
+    // Automations RLS
+    await pool.query(`
+      CREATE POLICY tenant_isolation_automations ON automations
+      USING (tenant_id = current_setting('app.tenant_id')::uuid)
+      WITH CHECK (tenant_id = current_setting('app.tenant_id')::uuid);
+    `).catch(() => {});
+
+    // Messages RLS
+    await pool.query(`
+      CREATE POLICY tenant_isolation_messages ON messages
+      USING (tenant_id = current_setting('app.tenant_id')::uuid)
+      WITH CHECK (tenant_id = current_setting('app.tenant_id')::uuid);
+    `).catch(() => {});
+
+    // Loyalty Points RLS
+    await pool.query(`
+      CREATE POLICY tenant_isolation_loyalty ON loyalty_points
+      USING (tenant_id = current_setting('app.tenant_id')::uuid)
+      WITH CHECK (tenant_id = current_setting('app.tenant_id')::uuid);
+    `).catch(() => {});
+
+    // Membership Plans RLS
+    await pool.query(`
+      CREATE POLICY tenant_isolation_plans ON membership_plans
+      USING (tenant_id = current_setting('app.tenant_id')::uuid)
+      WITH CHECK (tenant_id = current_setting('app.tenant_id')::uuid);
+    `).catch(() => {});
+
+    // Subscriptions RLS
+    await pool.query(`
+      CREATE POLICY tenant_isolation_subscriptions ON subscriptions
+      USING (tenant_id = current_setting('app.tenant_id')::uuid)
+      WITH CHECK (tenant_id = current_setting('app.tenant_id')::uuid);
+    `).catch(() => {});
+
+    // Sale Items RLS (inherits tenant_id from sale)
+    await pool.query(`
+      CREATE POLICY tenant_isolation_sale_items ON sale_items
+      USING (sale_id IN (
+        SELECT id FROM sales WHERE tenant_id = current_setting('app.tenant_id')::uuid
+      ))
+      WITH CHECK (sale_id IN (
+        SELECT id FROM sales WHERE tenant_id = current_setting('app.tenant_id')::uuid
+      ));
+    `).catch(() => {});
+
+    // Loyalty Transactions RLS
+    await pool.query(`
+      CREATE POLICY tenant_isolation_loyalty_transactions ON loyalty_transactions
+      USING (tenant_id = current_setting('app.tenant_id')::uuid)
+      WITH CHECK (tenant_id = current_setting('app.tenant_id')::uuid);
+    `).catch(() => {});
+
+    // Stock Movements RLS
+    await pool.query(`
+      CREATE POLICY tenant_isolation_stock_movements ON stock_movements
+      USING (tenant_id = current_setting('app.tenant_id')::uuid)
+      WITH CHECK (tenant_id = current_setting('app.tenant_id')::uuid);
+    `).catch(() => {});
+
+    console.log('Database tables, indexes, RLS policies, and audit logs created successfully');
   } catch (error) {
     console.error('Error creating tables:', error);
   } finally {
