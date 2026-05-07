@@ -16,24 +16,37 @@ export class LoyaltyRepositoryImpl implements LoyaltyRepository {
   }
 
   async addPoints(customerId: string, tenantId: string, points: number, reason: string, referenceId?: string): Promise<LoyaltyPoints> {
-    // Start transaction
     const client = await this.pool.connect();
     try {
       await client.query('BEGIN');
 
-      // Insert or update loyalty points
-      const upsertQuery = `
-        INSERT INTO loyalty_points (customer_id, tenant_id, points, updated_at)
-        VALUES ($1, $2, $3, NOW())
-        ON CONFLICT (customer_id)
-        DO UPDATE SET
-          points = loyalty_points.points + $3,
-          updated_at = NOW()
-        RETURNING id, customer_id, tenant_id, points, updated_at
+      const findQuery = `
+        SELECT id, customer_id, tenant_id, points, updated_at
+        FROM loyalty_points
+        WHERE customer_id = $1 AND tenant_id = $2
       `;
-      const upsertResult = await client.query(upsertQuery, [customerId, tenantId, points]);
+      const existingResult = await client.query(findQuery, [customerId, tenantId]);
 
-      // Record transaction
+      let loyalty;
+      if (existingResult.rows.length > 0) {
+        const updateQuery = `
+          UPDATE loyalty_points
+          SET points = points + $1, updated_at = NOW()
+          WHERE customer_id = $2 AND tenant_id = $3
+          RETURNING id, customer_id, tenant_id, points, updated_at
+        `;
+        const updateResult = await client.query(updateQuery, [points, customerId, tenantId]);
+        loyalty = updateResult.rows[0];
+      } else {
+        const insertQuery = `
+          INSERT INTO loyalty_points (customer_id, tenant_id, points, updated_at)
+          VALUES ($1, $2, $3, NOW())
+          RETURNING id, customer_id, tenant_id, points, updated_at
+        `;
+        const insertResult = await client.query(insertQuery, [customerId, tenantId, points]);
+        loyalty = insertResult.rows[0];
+      }
+
       const transactionQuery = `
         INSERT INTO loyalty_transactions (customer_id, tenant_id, type, points, reason, reference_id)
         VALUES ($1, $2, 'EARNED', $3, $4, $5)
@@ -41,7 +54,7 @@ export class LoyaltyRepositoryImpl implements LoyaltyRepository {
       await client.query(transactionQuery, [customerId, tenantId, points, reason, referenceId]);
 
       await client.query('COMMIT');
-      return upsertResult.rows[0];
+      return loyalty;
     } catch (error) {
       await client.query('ROLLBACK');
       throw error;

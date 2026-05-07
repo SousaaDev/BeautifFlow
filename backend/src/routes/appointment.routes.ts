@@ -15,6 +15,9 @@ router.get('/:id', appointmentController.show);
 // PUT /api/tenants/:tenantId/appointments/:id
 router.put('/:id', appointmentController.update);
 
+// PATCH /api/tenants/:tenantId/appointments/:id
+router.patch('/:id', appointmentController.update);
+
 // DELETE /api/tenants/:tenantId/appointments/:id (cancel)
 router.delete('/:id', appointmentController.destroy);
 

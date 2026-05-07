@@ -10,6 +10,7 @@
     "init-db": "ts-node scripts/init-db.ts",
     "setup-pitr": "ts-node scripts/setup-pitr.ts",
     "test": "jest",
+    "test-endpoints": "node ../../test-endpoints.js",
     "lint": "eslint src/**/*.ts",
     "format": "prettier --write src/**/*.ts"
   },
@@ -25,6 +26,7 @@
   "license": "ISC",
   "dependencies": {
     "@types/cron": "^2.0.1",
+    "axios": "^1.16.0",
     "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",
     "cron": "^3.5.0",

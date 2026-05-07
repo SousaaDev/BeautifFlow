@@ -40,9 +40,12 @@ const createTables = async () => {
         email VARCHAR(200),
         tags TEXT[],
         last_visit TIMESTAMP,
+        deleted_at TIMESTAMP,
         created_at TIMESTAMP DEFAULT NOW()
       );
     `);
+
+    await pool.query(`ALTER TABLE customers ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMP;`);
 
     // Create professionals table
     await pool.query(`
@@ -160,9 +163,11 @@ const createTables = async () => {
         condition JSONB,
         action VARCHAR(100),
         action_payload JSONB,
-        is_active BOOLEAN DEFAULT true
+        is_active BOOLEAN DEFAULT true,
+        created_at TIMESTAMP DEFAULT NOW()
       );
     `);
+    await pool.query(`ALTER TABLE automations ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT NOW();`);
 
     // Create messages table
     await pool.query(`

@@ -15,6 +15,7 @@ const createProductSchema = z.object({
 
 const updateProductSchema = createProductSchema.partial().extend({
   adjustStock: z.number().int().optional(),
+  stock: z.number().int().min(0).optional(),
 });
 
 const stockMovementSchema = z.object({
@@ -83,6 +84,12 @@ export const update = async (req: Request, res: Response) => {
     if (!existing) {
       return res.status(404).json({ error: 'Product not found' });
     }
+
+    // Aliases for partial stock updates
+    if (data.stock !== undefined) {
+      data.currentStock = data.stock;
+      delete data.stock;
+    }
     
     // Handle stock adjustment
     if (data.adjustStock !== undefined) {
@@ -100,6 +107,7 @@ export const update = async (req: Request, res: Response) => {
     if (error instanceof z.ZodError) {
       return res.status(400).json({ error: error.errors });
     }
+    console.error('Failed to update product', error);
     res.status(500).json({ error: 'Failed to update product' });
   }
 };
