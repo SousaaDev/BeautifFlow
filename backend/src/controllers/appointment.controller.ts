@@ -1,15 +1,17 @@
 import { Request, Response } from 'express';
 import { z } from 'zod';
 import { pool } from '../database/connection';
+import { Appointment } from '../models/Appointment';
 import { AppointmentRepositoryImpl } from '../models/AppointmentRepositoryImpl';
 import { CustomerRepositoryImpl } from '../models/CustomerRepositoryImpl';
 import { ProfessionalRepositoryImpl } from '../models/ProfessionalRepositoryImpl';
 import { ServiceRepositoryImpl } from '../models/ServiceRepositoryImpl';
+import { SubscriptionRepositoryImpl } from '../models/SubscriptionRepositoryImpl';
+import { MembershipPlanRepositoryImpl } from '../models/MembershipPlanRepositoryImpl';
 import { AutomationEngine } from '../services/AutomationEngine';
 import { redisClient } from '../infrastructure/redis';
 
 const createAppointmentSchema = z.object({
-  tenantId: z.string().uuid(),
   customerId: z.string().uuid(),
   professionalId: z.string().uuid(),
   serviceId: z.string().uuid(),
@@ -34,7 +36,15 @@ const getCustomerTagsByAppointmentCount = (count: number): string[] => {
 };
 
 const updateAppointmentSchema = z.object({
-  status: z.enum(['scheduled', 'completed', 'cancelled', 'no_show']).optional(),
+  status: z.union([
+    z.enum(['scheduled', 'confirmed', 'in_progress', 'completed', 'cancelled', 'no_show']),
+    z.enum(['SCHEDULED', 'CONFIRMED', 'IN_PROGRESS', 'COMPLETED', 'CANCELED', 'NO_SHOW']),
+  ]).optional().transform((value) => value?.toLowerCase()),
+  customerId: z.string().uuid().optional(),
+  professionalId: z.string().uuid().optional(),
+  serviceId: z.string().uuid().optional(),
+  startTime: z.string().datetime().optional(),
+  endTime: z.string().datetime().optional(),
   internalNotes: z.string().optional(),
   priceCharged: z.number().optional(),
 });
@@ -43,6 +53,8 @@ const appointmentRepository = new AppointmentRepositoryImpl(pool);
 const customerRepository = new CustomerRepositoryImpl(pool);
 const serviceRepository = new ServiceRepositoryImpl(pool);
 const profRepository = new ProfessionalRepositoryImpl(pool);
+const subscriptionRepository = new SubscriptionRepositoryImpl(pool);
+const membershipPlanRepository = new MembershipPlanRepositoryImpl(pool);
 const automationEngine = new AutomationEngine();
 
 // Enhanced conflict validation with buffer time and working hours
@@ -159,6 +171,7 @@ const validateAppointmentConflicts = async (
 };
 
 export const store = async (req: Request, res: Response) => {
+  const { tenantId } = req.params;
   const lockKey = `lock:appointment:${req.body.professionalId}:${new Date(req.body.startTime).toISOString()}`;
   let lockId: string | null = null;
 
@@ -180,24 +193,24 @@ export const store = async (req: Request, res: Response) => {
 
     // Validação 2: Buscar cliente e serviço antes de criar o agendamento
     const customer = await customerRepository.findById(data.customerId);
-    if (!customer || customer.tenantId !== data.tenantId) {
+    if (!customer || customer.tenantId !== tenantId) {
       return res.status(404).json({ error: 'Customer not found' });
     }
 
-    const service = await serviceRepository.findByTenantAndId(data.tenantId, data.serviceId);
+    const service = await serviceRepository.findByTenantAndId(tenantId, data.serviceId);
     if (!service) {
       return res.status(404).json({ error: 'Service not found' });
     }
 
     // Validação 3: Buscar profissional para pegar buffer_minutes
-    const professional = await profRepository.findByTenantAndId(data.tenantId, data.professionalId);
+    const professional = await profRepository.findByTenantAndId(tenantId, data.professionalId);
     if (!professional) {
       return res.status(404).json({ error: 'Professional not found' });
     }
 
     // Validação 4: Verificar conflitos robustos com buffer time e working hours
     const validation = await validateAppointmentConflicts(
-      data.tenantId,
+      tenantId,
       data.professionalId,
       data.customerId,
       startTime,
@@ -219,9 +232,39 @@ export const store = async (req: Request, res: Response) => {
       });
     }
 
+    const activeSubscription = await subscriptionRepository.findActiveByCustomer(
+      tenantId,
+      data.customerId
+    );
+
+    if (activeSubscription) {
+      const plan = await membershipPlanRepository.findById(activeSubscription.planId);
+      if (plan) {
+        const includedService = plan.servicesIncluded.find(
+          item => item.serviceId === data.serviceId
+        );
+
+        if (includedService) {
+          const usageCount = await appointmentRepository.countCustomerServiceUsageInPeriod(
+            tenantId,
+            data.customerId,
+            data.serviceId,
+            activeSubscription.currentPeriodStart,
+            activeSubscription.currentPeriodEnd
+          );
+
+          if (usageCount >= includedService.monthlyLimit) {
+            return res.status(409).json({
+              error: 'Monthly subscription usage limit reached for this service',
+            });
+          }
+        }
+      }
+    }
+
     // Criar agendamento
     const appointment = await appointmentRepository.create({
-      tenantId: data.tenantId,
+      tenantId: tenantId,
       customerId: data.customerId,
       professionalId: data.professionalId,
       serviceId: data.serviceId,
@@ -234,7 +277,7 @@ export const store = async (req: Request, res: Response) => {
     // Atualizar tag e última visita do cliente automaticamente
     try {
       const customerAppointments = await appointmentRepository.findByCustomer(
-        data.tenantId,
+        tenantId,
         data.customerId
       );
       const appointmentCount = customerAppointments.filter(a => a.status !== 'cancelled').length;
@@ -325,7 +368,13 @@ export const update = async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'Appointment not found' });
     }
     
-    const updated = await appointmentRepository.update(id, data);
+    const updateData: Partial<Appointment> = {
+      ...data,
+      status: data.status as Appointment['status'] | undefined,
+      startTime: data.startTime ? new Date(data.startTime) : undefined,
+      endTime: data.endTime ? new Date(data.endTime) : undefined,
+    }
+    const updated = await appointmentRepository.update(id, updateData);
 
     if (data.status === 'completed' && existing.status !== 'completed') {
       automationEngine.runForAppointmentCompleted(tenantId, id).catch(error => {
@@ -351,9 +400,9 @@ export const destroy = async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'Appointment not found' });
     }
     
-    const updated = await appointmentRepository.update(id, { status: 'cancelled' });
-    res.json(updated);
+    await appointmentRepository.delete(id);
+    res.status(204).send();
   } catch (error) {
-    res.status(500).json({ error: 'Failed to cancel appointment' });
+    res.status(500).json({ error: 'Failed to delete appointment' });
   }
 };
