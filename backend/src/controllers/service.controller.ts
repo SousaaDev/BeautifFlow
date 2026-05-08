@@ -4,27 +4,31 @@ import { pool } from '../database/connection';
 import { ServiceRepositoryImpl } from '../models/ServiceRepositoryImpl';
 
 const createServiceSchema = z.object({
-  tenantId: z.string().uuid(),
   name: z.string().min(1),
-  durationMinutes: z.number().int().min(1),
-  price: z.number().min(0),
-  commissionRate: z.number().min(0).max(100),
+  description: z.string().optional(),
+  duration: z.coerce.number().int().min(1),
+  price: z.coerce.number().min(0).default(0),
+  commissionRate: z.number().min(0).max(100).default(0),
 });
 
 const updateServiceSchema = createServiceSchema.partial();
-
-const serviceParamsSchema = z.object({
-  tenantId: z.string().uuid(),
-  id: z.string().uuid(),
-});
 
 const serviceRepository = new ServiceRepositoryImpl(pool);
 
 export const store = async (req: Request, res: Response) => {
   try {
+    const tenantId = req.params.tenantId;
+    if (!tenantId) {
+      return res.status(400).json({ error: 'tenantId is required' });
+    }
+
     const data = createServiceSchema.parse(req.body);
     const service = await serviceRepository.create({
-      ...data,
+      tenantId,
+      name: data.name,
+      durationMinutes: data.duration,
+      price: data.price,
+      commissionRate: data.commissionRate,
       isActive: true,
     });
     res.status(201).json(service);
@@ -32,7 +36,8 @@ export const store = async (req: Request, res: Response) => {
     if (error instanceof z.ZodError) {
       return res.status(400).json({ error: error.errors });
     }
-    res.status(500).json({ error: 'Failed to create service' });
+    console.error('Error creating service:', error);
+    res.status(500).json({ error: 'Failed to create service', details: error instanceof Error ? error.message : String(error) });
   }
 };
 
@@ -51,23 +56,27 @@ export const index = async (req: Request, res: Response) => {
 
 export const show = async (req: Request, res: Response) => {
   try {
-    const { tenantId, id } = serviceParamsSchema.parse(req.params);
+    const { tenantId, id } = req.params;
+    if (!tenantId || !id) {
+      return res.status(400).json({ error: 'tenantId and id are required' });
+    }
     const service = await serviceRepository.findByTenantAndId(tenantId, id);
     if (!service) {
       return res.status(404).json({ error: 'Service not found' });
     }
     res.json(service);
   } catch (error) {
-    if (error instanceof z.ZodError) {
-      return res.status(400).json({ error: error.errors });
-    }
     res.status(500).json({ error: 'Failed to fetch service' });
   }
 };
 
 export const update = async (req: Request, res: Response) => {
   try {
-    const { tenantId, id } = serviceParamsSchema.parse(req.params);
+    const { tenantId, id } = req.params;
+    if (!tenantId || !id) {
+      return res.status(400).json({ error: 'tenantId and id are required' });
+    }
+
     const data = updateServiceSchema.parse(req.body);
     
     const existing = await serviceRepository.findByTenantAndId(tenantId, id);
@@ -75,7 +84,12 @@ export const update = async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'Service not found' });
     }
     
-    const updated = await serviceRepository.update(id, data);
+    const updated = await serviceRepository.update(id, {
+      name: data.name,
+      durationMinutes: data.duration,
+      price: data.price,
+      commissionRate: data.commissionRate,
+    });
     res.json(updated);
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -87,7 +101,10 @@ export const update = async (req: Request, res: Response) => {
 
 export const destroy = async (req: Request, res: Response) => {
   try {
-    const { tenantId, id } = serviceParamsSchema.parse(req.params);
+    const { tenantId, id } = req.params;
+    if (!tenantId || !id) {
+      return res.status(400).json({ error: 'tenantId and id are required' });
+    }
     const existing = await serviceRepository.findByTenantAndId(tenantId, id);
     if (!existing) {
       return res.status(404).json({ error: 'Service not found' });

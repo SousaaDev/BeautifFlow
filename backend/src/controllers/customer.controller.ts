@@ -8,7 +8,6 @@ const customerRepository = new CustomerRepositoryImpl(pool);
 const createCustomerUseCase = new CreateCustomer(customerRepository);
 
 const createCustomerSchema = z.object({
-  tenantId: z.string().uuid(),
   name: z.string(),
   phone: z.string().optional(),
   email: z.string().email().optional(),
@@ -26,9 +25,14 @@ const updateCustomerSchema = z.object({
 
 export const store = async (req: Request, res: Response) => {
   try {
+    const tenantId = req.query.tenantId as string;
+    if (!tenantId) {
+      return res.status(400).json({ error: 'tenantId is required' });
+    }
+
     const data = createCustomerSchema.parse(req.body);
     const customer = await createCustomerUseCase.execute({
-      tenantId: data.tenantId,
+      tenantId,
       name: data.name,
       phone: data.phone,
       email: data.email,
@@ -37,6 +41,9 @@ export const store = async (req: Request, res: Response) => {
     });
     res.status(201).json({ message: 'Customer created', customer });
   } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: error.errors });
+    }
     if (error instanceof Error) {
       return res.status(400).json({ error: error.message });
     }

@@ -10,6 +10,9 @@ import saleRoutes from './sale.routes';
 import automationRoutes from './automation.routes';
 import analyticsRoutes from './analytics.routes';
 import loyaltyRoutes from './loyalty.routes';
+import membershipRoutes from './membership.routes';
+import paymentRoutes, { webhookRouter } from './payment.routes';
+import billingRoutes from './billing.routes';
 
 export const setupRoutes = (app: Express) => {
   app.get('/', (_req, res) => {
@@ -24,7 +27,11 @@ export const setupRoutes = (app: Express) => {
   app.use('/api/tenants/:tenantId/products', productRoutes);
   app.use('/api/tenants/:tenantId/appointments', appointmentRoutes);
   app.use('/api/tenants/:tenantId/sales', saleRoutes);
+  app.use('/api/tenants/:tenantId', membershipRoutes);
+  app.use('/api/tenants/:tenantId/payments', paymentRoutes);
+  app.use('/api/billing', billingRoutes);
   app.use('/api/automations', automationRoutes);
   app.use('/api/analytics', analyticsRoutes);
   app.use('/api/tenants/:tenantId', loyaltyRoutes);
+  app.use('/api/payments/webhooks', webhookRouter);
 };

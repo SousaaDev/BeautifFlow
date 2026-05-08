@@ -6,7 +6,7 @@ export interface Appointment {
   serviceId: string;
   startTime: Date;
   endTime: Date;
-  status: 'scheduled' | 'completed' | 'cancelled' | 'no_show';
+  status: 'scheduled' | 'confirmed' | 'in_progress' | 'completed' | 'cancelled' | 'no_show';
   internalNotes?: string;
   priceCharged?: number;
   createdAt: Date;

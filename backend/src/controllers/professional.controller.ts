@@ -4,10 +4,9 @@ import { pool } from '../database/connection';
 import { ProfessionalRepositoryImpl } from '../models/ProfessionalRepositoryImpl';
 
 const createProfessionalSchema = z.object({
-  tenantId: z.string().uuid(),
   name: z.string().min(1),
   phone: z.string().optional(),
-  commissionRate: z.number().min(0).max(100),
+  commissionRate: z.number().min(0).max(100).default(0),
   bufferMinutes: z.number().int().min(0).default(10),
 });
 
@@ -17,8 +16,14 @@ const profRepository = new ProfessionalRepositoryImpl(pool);
 
 export const store = async (req: Request, res: Response) => {
   try {
+    const tenantId = req.params.tenantId;
+    if (!tenantId) {
+      return res.status(400).json({ error: 'tenantId is required' });
+    }
+    
     const data = createProfessionalSchema.parse(req.body);
     const professional = await profRepository.create({
+      tenantId,
       ...data,
       isActive: true,
     });

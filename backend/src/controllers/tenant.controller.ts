@@ -50,6 +50,13 @@ const updateTenantSchema = z.object({
 
 export const update = async (req: Request, res: Response) => {
   const { id } = req.params;
+  const auth = req as any;
+
+  // Verify the user can only update their own tenant
+  if (auth.user?.tenantId !== id) {
+    return res.status(403).json({ error: 'Forbidden: Cannot update this tenant' });
+  }
+
   try {
     const data = updateTenantSchema.parse(req.body);
     const updateData = {

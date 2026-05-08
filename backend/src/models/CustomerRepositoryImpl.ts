@@ -58,6 +58,11 @@ export class CustomerRepositoryImpl implements CustomerRepository {
       conditions.push('deleted_at IS NULL');
     }
 
+    // Exclude billing-only contacts from normal salon customer queries
+    if (filters.excludeBilling !== false) {
+      conditions.push(`(tags IS NULL OR NOT (tags @> ARRAY['billing']::text[]))`);
+    }
+
     const whereClause = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
     const query = `SELECT * FROM customers ${whereClause} ORDER BY created_at DESC`;
     const result = await this.pool.query(query, values);

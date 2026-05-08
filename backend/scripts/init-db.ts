@@ -23,12 +23,14 @@ const createTables = async () => {
       CREATE TABLE IF NOT EXISTS users (
         id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
         tenant_id UUID REFERENCES beauty_shops(id),
+        name VARCHAR(200),
         email VARCHAR(200) UNIQUE NOT NULL,
         password_hash VARCHAR(200) NOT NULL,
         role VARCHAR(20) NOT NULL DEFAULT 'OWNER',
         created_at TIMESTAMP DEFAULT NOW()
       );
     `);
+    await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS name VARCHAR(200);`);
 
     // Create customers table
     await pool.query(`
@@ -208,6 +210,28 @@ const createTables = async () => {
       );
     `);
 
+    // Create subscriptions table
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS subscriptions (
+        id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+        tenant_id UUID NOT NULL REFERENCES beauty_shops(id),
+        customer_id UUID NOT NULL REFERENCES customers(id),
+        plan_id VARCHAR(255) NOT NULL,
+        status VARCHAR(20) NOT NULL CHECK (status IN ('active', 'cancelled', 'paused', 'expired')),
+        start_date TIMESTAMP NOT NULL,
+        current_period_start TIMESTAMP NOT NULL,
+        current_period_end TIMESTAMP NOT NULL,
+        next_billing_date TIMESTAMP NOT NULL,
+        price DECIMAL(10, 2) NOT NULL,
+        payment_method VARCHAR(50),
+        gateway_subscription_id VARCHAR(255),
+        metadata JSONB,
+        cancelled_at TIMESTAMP,
+        created_at TIMESTAMP DEFAULT NOW(),
+        updated_at TIMESTAMP DEFAULT NOW()
+      );
+    `);
+
     // Create loyalty_transactions table
     await pool.query(`
       CREATE TABLE IF NOT EXISTS loyalty_transactions (
@@ -267,6 +291,7 @@ const createTables = async () => {
       CREATE INDEX IF NOT EXISTS idx_transactions_category ON transactions(category);
       CREATE INDEX IF NOT EXISTS idx_loyalty_points_customer ON loyalty_points(customer_id);
       CREATE INDEX IF NOT EXISTS idx_subscriptions_customer ON subscriptions(customer_id);
+      CREATE INDEX IF NOT EXISTS idx_subscriptions_plan ON subscriptions(plan_id);
       CREATE INDEX IF NOT EXISTS idx_messages_tenant ON messages(tenant_id);
       CREATE INDEX IF NOT EXISTS idx_automations_tenant ON automations(tenant_id);
       CREATE INDEX IF NOT EXISTS idx_loyalty_transactions_customer ON loyalty_transactions(customer_id);

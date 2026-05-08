@@ -1,7 +1,7 @@
 // Configurações base
 const BASE_URL = 'http://localhost:3000';
 const TEST_TENANT_ID = '550e8400-e29b-41d4-a716-446655440000';
-const TEST_CUSTOMER_ID = '660e8400-e29b-41d4-a716-446655440001';
+const TEST_CUSTOMER_ID = 'b1e13af2-3fbe-48ba-a8eb-6cf1c7b26092';
 
 // Variáveis para armazenar IDs criados durante os testes
 let tenantId = TEST_TENANT_ID;
@@ -11,6 +11,8 @@ let serviceId;
 let productId;
 let appointmentId;
 let saleId;
+let membershipPlanId;
+let subscriptionId;
 let authToken;
 let initialStock;
 
@@ -155,8 +157,81 @@ async function runTests() {
     console.log('   Service criado:', serviceId);
   }
 
-  // 8. Products - Create
-  console.log('\n📦 8. Products - Create');
+  // 8. Memberships - Create Plan
+  console.log('\n💳 8. Memberships - Create Plan');
+  let membershipPlanData = null;
+  if (serviceId) {
+    membershipPlanData = await makeRequest('POST', `/api/tenants/${tenantId}/membership-plans`, {
+      name: 'Plano VIP',
+      description: 'Plano mensal com cortes ilimitados e 1 tratamento',
+      price: 199.90,
+      billingCycle: 'monthly',
+      servicesIncluded: [
+        {
+          serviceId: serviceId,
+          monthlyLimit: 4
+        }
+      ],
+      isActive: true
+    });
+  } else {
+    console.log('   ⚠️  Falha ao criar plano de membership: serviceId não definido');
+  }
+
+  if (membershipPlanData?.plan?.id || membershipPlanData?.id) {
+    membershipPlanId = membershipPlanData?.plan?.id || membershipPlanData?.id;
+    console.log('   Plano de membership criado:', membershipPlanId);
+  }
+
+  // 9. Memberships - Create Subscription
+  console.log('\n📝 9. Memberships - Create Subscription');
+  let subscriptionData = null;
+  if (membershipPlanId) {
+    subscriptionData = await makeRequest('POST', `/api/tenants/${tenantId}/subscriptions`, {
+      customerId: customerId,
+      planId: membershipPlanId,
+      paymentMethod: 'credit_card'
+    });
+  } else {
+    console.log('   ⚠️  Falha ao criar assinatura: membershipPlanId não definido');
+  }
+
+  if (subscriptionData?.subscription?.id || subscriptionData?.id) {
+    subscriptionId = subscriptionData?.subscription?.id || subscriptionData?.id;
+    console.log('   Assinatura criada:', subscriptionId);
+  }
+
+  // 10. Memberships - List Subscriptions
+  console.log('\n📄 10. Memberships - List Subscriptions');
+  await makeRequest('GET', `/api/tenants/${tenantId}/subscriptions`);
+
+  // 11. Memberships - Update Subscription
+  console.log('\n✏️ 11. Memberships - Update Subscription');
+  if (subscriptionId) {
+    await makeRequest('PUT', `/api/tenants/${tenantId}/subscriptions/${subscriptionId}`, {
+      status: 'cancelled'
+    });
+  } else {
+    console.log('   ⚠️  Falha ao atualizar assinatura: subscriptionId não definido');
+  }
+
+  // 12. Payments - Create Checkout Session
+  console.log('\n💳 12. Payments - Create Checkout Session');
+  const checkoutData = await makeRequest('POST', `/api/tenants/${tenantId}/payments/checkout`, {
+    customerId: customerId,
+    planId: membershipPlanId,
+    successUrl: 'http://localhost:3000/success',
+    cancelUrl: 'http://localhost:3000/cancel'
+  }, { Authorization: `Bearer ${authToken}` });
+
+  if (checkoutData?.checkoutUrl) {
+    console.log('   Checkout URL gerada:', checkoutData.checkoutUrl);
+  } else {
+    console.log('   ⚠️  Falha ao gerar checkout URL');
+  }
+
+  // 13. Products - Create
+  console.log('\n📦 13. Products - Create');
   const productData = await makeRequest('POST', `/api/tenants/${tenantId}/products`, {
     tenantId: tenantId,
     name: 'Gel Fixador',
@@ -172,8 +247,8 @@ async function runTests() {
     console.log('   Product criado:', productId, 'Stock inicial:', initialStock);
   }
 
-  // 9. Appointments - Create
-  console.log('\n📅 9. Appointments - Create');
+  // 14. Appointments - Create
+  console.log('\n📅 14. Appointments - Create');
   const appointmentData = await makeRequest('POST', `/api/tenants/${tenantId}/appointments`, {
     tenantId: tenantId,
     customerId: customerId,
@@ -189,16 +264,16 @@ async function runTests() {
     console.log('   Appointment criado:', appointmentId);
   }
 
-  // 10. Appointments - Update Status
-  console.log('\n📅 10. Appointments - Update Status');
+  // 15. Appointments - Update Status
+  console.log('\n📅 15. Appointments - Update Status');
   if (appointmentId) {
     await makeRequest('PATCH', `/api/tenants/${tenantId}/appointments/${appointmentId}`, {
       status: 'completed'
     });
   }
 
-  // 11. Products - Update Stock
-  console.log('\n📦 11. Products - Update Stock');
+  // 16. Products - Update Stock
+  console.log('\n📦 16. Products - Update Stock');
   if (productId) {
     const updatedStockResult = await makeRequest('PATCH', `/api/tenants/${tenantId}/products/${productId}`, {
       stock: 140
@@ -209,8 +284,8 @@ async function runTests() {
     }
   }
 
-  // 12. Sales - Create
-  console.log('\n🛒 12. Sales - Create');
+  // 17. Sales - Create
+  console.log('\n🛒 17. Sales - Create');
   const saleData = await makeRequest('POST', `/api/tenants/${tenantId}/sales`, {
     tenantId: tenantId,
     customerId: customerId,
@@ -248,16 +323,16 @@ async function runTests() {
     }
   }
 
-  // 13. Loyalty - Add Points
-  console.log('\n🎯 13. Loyalty - Add Points');
+  // 18. Loyalty - Add Points
+  console.log('\n🎯 18. Loyalty - Add Points');
   const addPointsResult = await makeRequest('POST', `/api/tenants/${tenantId}/customers/${customerId}/loyalty/add`, {
     points: 100,
     reason: 'Compra de teste',
     referenceId: saleId || 'test-ref'
   });
 
-  // 14. Loyalty - Redeem Points (só se tiver pontos suficientes)
-  console.log('\n🎯 14. Loyalty - Redeem Points');
+  // 19. Loyalty - Redeem Points (só se tiver pontos suficientes)
+  console.log('\n🎯 19. Loyalty - Redeem Points');
   if (addPointsResult) {
     await makeRequest('POST', `/api/tenants/${tenantId}/customers/${customerId}/loyalty/redeem`, {
       points: 50,
@@ -268,8 +343,8 @@ async function runTests() {
     console.log('   ⚠️  Pulando resgate - falha ao adicionar pontos');
   }
 
-  // 15. Automations - Create
-  console.log('\n🤖 15. Automations - Create');
+  // 20. Automations - Create
+  console.log('\n🤖 20. Automations - Create');
   const automationData = await makeRequest('POST', '/api/automations', {
     tenantId: tenantId,
     name: 'Automação de Teste',
@@ -284,12 +359,12 @@ async function runTests() {
     isActive: true
   }, { Authorization: `Bearer ${authToken}` });
 
-  // 16. Analytics - Overview
-  console.log('\n📊 16. Analytics - Overview');
+  // 21. Analytics - Overview
+  console.log('\n📊 21. Analytics - Overview');
   await makeRequest('GET', `/api/analytics/overview?tenantId=${tenantId}&startDate=2026-01-01&endDate=2026-12-31`, null, { Authorization: `Bearer ${authToken}` });
 
-  // 17. Verificações finais
-  console.log('\n🔍 17. Verificações finais');
+  // 22. Verificações finais
+  console.log('\n🔍 22. Verificações finais');
 
   // Verificar se estoque foi decrementado
   console.log('   - Verificando estoque do produto...');
@@ -315,7 +390,7 @@ async function runTests() {
   }
 
   // 18. Listagens para verificar se tudo foi criado
-  console.log('\n📋 18. Verificação de listagens');
+  console.log('\n📋 23. Verificação de listagens');
 
   const customers = await makeRequest('GET', `/api/customers?tenantId=${tenantId}`);
   console.log(`   👥 Customers criados: ${customers?.length || 0}`);

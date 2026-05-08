@@ -34,11 +34,18 @@ export class AppointmentRepositoryImpl implements AppointmentRepository {
 
   async findById(id: string): Promise<Appointment | null> {
     const query = `
-      SELECT id, tenant_id as "tenantId", customer_id as "customerId", professional_id as "professionalId",
-             service_id as "serviceId", start_time as "startTime", end_time as "endTime", 
-             status, internal_notes as "internalNotes", price_charged as "priceCharged", 
-             created_at as "createdAt"
-      FROM appointments WHERE id = $1
+      SELECT a.id, a.tenant_id as "tenantId", a.customer_id as "customerId", a.professional_id as "professionalId",
+             a.service_id as "serviceId", a.start_time as "startTime", a.end_time as "endTime", 
+             a.status, a.internal_notes as "internalNotes", a.price_charged as "priceCharged", 
+             a.created_at as "createdAt",
+             json_build_object('id', c.id, 'name', c.name, 'email', c.email) as "customer",
+             json_build_object('id', s.id, 'name', s.name, 'duration', s.duration_minutes) as "service",
+             json_build_object('id', p.id, 'name', p.name) as "professional"
+      FROM appointments a
+      LEFT JOIN customers c ON a.customer_id = c.id
+      LEFT JOIN services s ON a.service_id = s.id
+      LEFT JOIN professionals p ON a.professional_id = p.id
+      WHERE a.id = $1
     `;
     const result = await this.pool.query(query, [id]);
     return result.rows[0] || null;
@@ -46,12 +53,19 @@ export class AppointmentRepositoryImpl implements AppointmentRepository {
 
   async findByTenant(tenantId: string): Promise<Appointment[]> {
     const query = `
-      SELECT id, tenant_id as "tenantId", customer_id as "customerId", professional_id as "professionalId",
-             service_id as "serviceId", start_time as "startTime", end_time as "endTime", 
-             status, internal_notes as "internalNotes", price_charged as "priceCharged", 
-             created_at as "createdAt"
-      FROM appointments WHERE tenant_id = $1
-      ORDER BY start_time DESC
+      SELECT a.id, a.tenant_id as "tenantId", a.customer_id as "customerId", a.professional_id as "professionalId",
+             a.service_id as "serviceId", a.start_time as "startTime", a.end_time as "endTime", 
+             a.status, a.internal_notes as "internalNotes", a.price_charged as "priceCharged", 
+             a.created_at as "createdAt",
+             json_build_object('id', c.id, 'name', c.name, 'email', c.email) as "customer",
+             json_build_object('id', s.id, 'name', s.name, 'duration', s.duration_minutes) as "service",
+             json_build_object('id', p.id, 'name', p.name) as "professional"
+      FROM appointments a
+      LEFT JOIN customers c ON a.customer_id = c.id
+      LEFT JOIN services s ON a.service_id = s.id
+      LEFT JOIN professionals p ON a.professional_id = p.id
+      WHERE a.tenant_id = $1
+      ORDER BY a.start_time DESC
     `;
     const result = await this.pool.query(query, [tenantId]);
     return result.rows;
@@ -59,11 +73,18 @@ export class AppointmentRepositoryImpl implements AppointmentRepository {
 
   async findByTenantAndId(tenantId: string, id: string): Promise<Appointment | null> {
     const query = `
-      SELECT id, tenant_id as "tenantId", customer_id as "customerId", professional_id as "professionalId",
-             service_id as "serviceId", start_time as "startTime", end_time as "endTime", 
-             status, internal_notes as "internalNotes", price_charged as "priceCharged", 
-             created_at as "createdAt"
-      FROM appointments WHERE id = $1 AND tenant_id = $2
+      SELECT a.id, a.tenant_id as "tenantId", a.customer_id as "customerId", a.professional_id as "professionalId",
+             a.service_id as "serviceId", a.start_time as "startTime", a.end_time as "endTime", 
+             a.status, a.internal_notes as "internalNotes", a.price_charged as "priceCharged", 
+             a.created_at as "createdAt",
+             json_build_object('id', c.id, 'name', c.name, 'email', c.email) as "customer",
+             json_build_object('id', s.id, 'name', s.name, 'duration', s.duration_minutes) as "service",
+             json_build_object('id', p.id, 'name', p.name) as "professional"
+      FROM appointments a
+      LEFT JOIN customers c ON a.customer_id = c.id
+      LEFT JOIN services s ON a.service_id = s.id
+      LEFT JOIN professionals p ON a.professional_id = p.id
+      WHERE a.id = $1 AND a.tenant_id = $2
     `;
     const result = await this.pool.query(query, [id, tenantId]);
     return result.rows[0] || null;
@@ -77,20 +98,26 @@ export class AppointmentRepositoryImpl implements AppointmentRepository {
     excludeId?: string
   ): Promise<Appointment[]> {
     let query = `
-      SELECT id, tenant_id as "tenantId", customer_id as "customerId", professional_id as "professionalId",
-             service_id as "serviceId", start_time as "startTime", end_time as "endTime", 
-             status, internal_notes as "internalNotes", price_charged as "priceCharged", 
-             created_at as "createdAt"
-      FROM appointments 
-      WHERE tenant_id = $1 
-        AND professional_id = $2 
-        AND status NOT IN ('cancelled')
-        AND (start_time, end_time) OVERLAPS ($3::TIMESTAMP, $4::TIMESTAMP)
+      SELECT a.id, a.tenant_id as "tenantId", a.customer_id as "customerId", a.professional_id as "professionalId",
+             a.service_id as "serviceId", a.start_time as "startTime", a.end_time as "endTime", 
+             a.status, a.internal_notes as "internalNotes", a.price_charged as "priceCharged", 
+             a.created_at as "createdAt",
+             json_build_object('id', c.id, 'name', c.name, 'email', c.email) as "customer",
+             json_build_object('id', s.id, 'name', s.name, 'duration', s.duration_minutes) as "service",
+             json_build_object('id', p.id, 'name', p.name) as "professional"
+      FROM appointments a
+      LEFT JOIN customers c ON a.customer_id = c.id
+      LEFT JOIN services s ON a.service_id = s.id
+      LEFT JOIN professionals p ON a.professional_id = p.id
+      WHERE a.tenant_id = $1 
+        AND a.professional_id = $2 
+        AND a.status NOT IN ('cancelled')
+        AND (a.start_time, a.end_time) OVERLAPS ($3::TIMESTAMP, $4::TIMESTAMP)
     `;
     const params: any[] = [tenantId, professionalId, startTime, endTime];
 
     if (excludeId) {
-      query += ` AND id != $5`;
+      query += ` AND a.id != $5`;
       params.push(excludeId);
     }
 
@@ -103,6 +130,26 @@ export class AppointmentRepositoryImpl implements AppointmentRepository {
     const values: any[] = [];
     let paramCount = 1;
 
+    if (data.customerId !== undefined) {
+      fields.push(`customer_id = $${paramCount++}`);
+      values.push(data.customerId);
+    }
+    if (data.professionalId !== undefined) {
+      fields.push(`professional_id = $${paramCount++}`);
+      values.push(data.professionalId);
+    }
+    if (data.serviceId !== undefined) {
+      fields.push(`service_id = $${paramCount++}`);
+      values.push(data.serviceId);
+    }
+    if (data.startTime !== undefined) {
+      fields.push(`start_time = $${paramCount++}`);
+      values.push(data.startTime);
+    }
+    if (data.endTime !== undefined) {
+      fields.push(`end_time = $${paramCount++}`);
+      values.push(data.endTime);
+    }
     if (data.status !== undefined) {
       fields.push(`status = $${paramCount++}`);
       values.push(data.status);
@@ -139,12 +186,19 @@ export class AppointmentRepositoryImpl implements AppointmentRepository {
 
   async findByCustomer(tenantId: string, customerId: string): Promise<Appointment[]> {
     const query = `
-      SELECT id, tenant_id as "tenantId", customer_id as "customerId", professional_id as "professionalId",
-             service_id as "serviceId", start_time as "startTime", end_time as "endTime", 
-             status, internal_notes as "internalNotes", price_charged as "priceCharged", 
-             created_at as "createdAt"
-      FROM appointments WHERE tenant_id = $1 AND customer_id = $2
-      ORDER BY start_time DESC
+      SELECT a.id, a.tenant_id as "tenantId", a.customer_id as "customerId", a.professional_id as "professionalId",
+             a.service_id as "serviceId", a.start_time as "startTime", a.end_time as "endTime", 
+             a.status, a.internal_notes as "internalNotes", a.price_charged as "priceCharged", 
+             a.created_at as "createdAt",
+             json_build_object('id', c.id, 'name', c.name, 'email', c.email) as "customer",
+             json_build_object('id', s.id, 'name', s.name, 'duration', s.duration_minutes) as "service",
+             json_build_object('id', p.id, 'name', p.name) as "professional"
+      FROM appointments a
+      LEFT JOIN customers c ON a.customer_id = c.id
+      LEFT JOIN services s ON a.service_id = s.id
+      LEFT JOIN professionals p ON a.professional_id = p.id
+      WHERE a.tenant_id = $1 AND a.customer_id = $2
+      ORDER BY a.start_time DESC
     `;
     const result = await this.pool.query(query, [tenantId, customerId]);
     return result.rows;
@@ -152,12 +206,19 @@ export class AppointmentRepositoryImpl implements AppointmentRepository {
 
   async findByProfessional(tenantId: string, professionalId: string): Promise<Appointment[]> {
     const query = `
-      SELECT id, tenant_id as "tenantId", customer_id as "customerId", professional_id as "professionalId",
-             service_id as "serviceId", start_time as "startTime", end_time as "endTime", 
-             status, internal_notes as "internalNotes", price_charged as "priceCharged", 
-             created_at as "createdAt"
-      FROM appointments WHERE tenant_id = $1 AND professional_id = $2
-      ORDER BY start_time DESC
+      SELECT a.id, a.tenant_id as "tenantId", a.customer_id as "customerId", a.professional_id as "professionalId",
+             a.service_id as "serviceId", a.start_time as "startTime", a.end_time as "endTime", 
+             a.status, a.internal_notes as "internalNotes", a.price_charged as "priceCharged", 
+             a.created_at as "createdAt",
+             json_build_object('id', c.id, 'name', c.name, 'email', c.email) as "customer",
+             json_build_object('id', s.id, 'name', s.name, 'duration', s.duration_minutes) as "service",
+             json_build_object('id', p.id, 'name', p.name) as "professional"
+      FROM appointments a
+      LEFT JOIN customers c ON a.customer_id = c.id
+      LEFT JOIN services s ON a.service_id = s.id
+      LEFT JOIN professionals p ON a.professional_id = p.id
+      WHERE a.tenant_id = $1 AND a.professional_id = $2
+      ORDER BY a.start_time DESC
     `;
     const result = await this.pool.query(query, [tenantId, professionalId]);
     return result.rows;
@@ -165,14 +226,42 @@ export class AppointmentRepositoryImpl implements AppointmentRepository {
 
   async findByDateRange(tenantId: string, startDate: Date, endDate: Date): Promise<Appointment[]> {
     const query = `
-      SELECT id, tenant_id as "tenantId", customer_id as "customerId", professional_id as "professionalId",
-             service_id as "serviceId", start_time as "startTime", end_time as "endTime", 
-             status, internal_notes as "internalNotes", price_charged as "priceCharged", 
-             created_at as "createdAt"
-      FROM appointments WHERE tenant_id = $1 AND start_time >= $2 AND end_time <= $3
-      ORDER BY start_time ASC
+      SELECT a.id, a.tenant_id as "tenantId", a.customer_id as "customerId", a.professional_id as "professionalId",
+             a.service_id as "serviceId", a.start_time as "startTime", a.end_time as "endTime", 
+             a.status, a.internal_notes as "internalNotes", a.price_charged as "priceCharged", 
+             a.created_at as "createdAt",
+             json_build_object('id', c.id, 'name', c.name, 'email', c.email) as "customer",
+             json_build_object('id', s.id, 'name', s.name, 'duration', s.duration_minutes) as "service",
+             json_build_object('id', p.id, 'name', p.name) as "professional"
+      FROM appointments a
+      LEFT JOIN customers c ON a.customer_id = c.id
+      LEFT JOIN services s ON a.service_id = s.id
+      LEFT JOIN professionals p ON a.professional_id = p.id
+      WHERE a.tenant_id = $1 AND a.start_time >= $2 AND a.end_time <= $3
+      ORDER BY a.start_time ASC
     `;
     const result = await this.pool.query(query, [tenantId, startDate, endDate]);
     return result.rows;
+  }
+
+  async countCustomerServiceUsageInPeriod(
+    tenantId: string,
+    customerId: string,
+    serviceId: string,
+    startDate: Date,
+    endDate: Date
+  ): Promise<number> {
+    const result = await this.pool.query(
+      `SELECT COUNT(*) as count
+       FROM appointments
+       WHERE tenant_id = $1
+         AND customer_id = $2
+         AND service_id = $3
+         AND status IN ('scheduled', 'confirmed', 'in_progress', 'completed')
+         AND start_time >= $4
+         AND start_time < $5`,
+      [tenantId, customerId, serviceId, startDate, endDate]
+    );
+    return parseInt(result.rows[0]?.count || '0', 10);
   }
 }

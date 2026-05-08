@@ -17,4 +17,11 @@ export interface AppointmentRepository {
   findByCustomer(tenantId: string, customerId: string): Promise<Appointment[]>;
   findByProfessional(tenantId: string, professionalId: string): Promise<Appointment[]>;
   findByDateRange(tenantId: string, startDate: Date, endDate: Date): Promise<Appointment[]>;
+  countCustomerServiceUsageInPeriod(
+    tenantId: string,
+    customerId: string,
+    serviceId: string,
+    startDate: Date,
+    endDate: Date
+  ): Promise<number>;
 }

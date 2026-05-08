@@ -6,6 +6,7 @@ export interface CustomerFilters {
   lastVisitAfter?: Date;
   lastVisitBefore?: Date;
   includeDeleted?: boolean; // For admin purposes
+  excludeBilling?: boolean; // Hide billing contacts from salon customer lists
 }
 
 export interface CustomerRepository {

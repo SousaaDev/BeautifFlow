@@ -5,17 +5,31 @@ import { ProductRepositoryImpl } from '../models/ProductRepositoryImpl';
 import { StockMovementRepositoryImpl } from '../models/StockMovementRepositoryImpl';
 
 const createProductSchema = z.object({
-  tenantId: z.string().uuid(),
   name: z.string().min(1),
-  currentStock: z.number().int().min(0).default(0),
-  minThreshold: z.number().int().min(0).default(5),
-  costPrice: z.number().min(0),
-  salePrice: z.number().min(0),
+  description: z.string().optional(),
+  currentStock: z.number().int().min(0).optional().default(0),
+  stock: z.number().int().min(0).optional(),
+  minThreshold: z.number().int().min(0).optional().default(5),
+  minStock: z.number().int().min(0).optional(),
+  costPrice: z.number().min(0).optional(),
+  salePrice: z.number().min(0).optional(),
+  price: z.number().min(0).optional(),
+  isActive: z.boolean().optional().default(true),
 });
 
-const updateProductSchema = createProductSchema.partial().extend({
-  adjustStock: z.number().int().optional(),
+const updateProductSchema = z.object({
+  tenantId: z.string().uuid().optional(),
+  name: z.string().min(1).optional(),
+  description: z.string().optional(),
+  currentStock: z.number().int().min(0).optional(),
   stock: z.number().int().min(0).optional(),
+  minThreshold: z.number().int().min(0).optional(),
+  minStock: z.number().int().min(0).optional(),
+  costPrice: z.number().min(0).optional(),
+  salePrice: z.number().min(0).optional(),
+  price: z.number().min(0).optional(),
+  adjustStock: z.number().int().optional(),
+  isActive: z.boolean().optional(),
 });
 
 const stockMovementSchema = z.object({
@@ -30,15 +44,16 @@ const stockMovementRepository = new StockMovementRepositoryImpl(pool);
 
 export const store = async (req: Request, res: Response) => {
   try {
+    const { tenantId } = req.params;
     const data = createProductSchema.parse(req.body);
     const product = await productRepository.create({
-      tenantId: data.tenantId,
+      tenantId,
       name: data.name,
-      currentStock: data.currentStock,
-      minThreshold: data.minThreshold,
-      costPrice: data.costPrice,
-      salePrice: data.salePrice,
-      isActive: true,
+      currentStock: data.stock || data.currentStock || 0,
+      minThreshold: data.minStock || data.minThreshold || 5,
+      costPrice: data.costPrice || 0,
+      salePrice: data.price || data.salePrice || 0,
+      isActive: data.isActive !== false,
     });
     res.status(201).json(product);
   } catch (error) {
@@ -85,10 +100,20 @@ export const update = async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'Product not found' });
     }
 
-    // Aliases for partial stock updates
+    // Map frontend field names to backend field names
     if (data.stock !== undefined) {
       data.currentStock = data.stock;
       delete data.stock;
+    }
+    
+    if (data.minStock !== undefined) {
+      data.minThreshold = data.minStock;
+      delete data.minStock;
+    }
+
+    if (data.price !== undefined) {
+      data.salePrice = data.price;
+      delete data.price;
     }
     
     // Handle stock adjustment
@@ -98,7 +123,7 @@ export const update = async (req: Request, res: Response) => {
         return res.status(400).json({ error: 'Stock cannot be negative' });
       }
       data.currentStock = newStock;
-      delete data.adjustStock; // Remove adjustStock from data as it's not a DB field
+      delete data.adjustStock;
     }
     
     const updated = await productRepository.update(id, data);

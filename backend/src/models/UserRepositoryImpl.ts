@@ -7,11 +7,11 @@ export class UserRepositoryImpl implements UserRepository {
 
   async create(user: Omit<User, 'id' | 'createdAt'>): Promise<User> {
     const query = `
-      INSERT INTO users (tenant_id, email, password_hash, role)
-      VALUES ($1, $2, $3, $4)
-      RETURNING id, tenant_id, email, password_hash, role, created_at
+      INSERT INTO users (tenant_id, name, email, password_hash, role)
+      VALUES ($1, $2, $3, $4, $5)
+      RETURNING id, tenant_id, name, email, password_hash, role, created_at
     `;
-    const values = [user.tenantId || null, user.email, user.passwordHash, user.role];
+    const values = [user.tenantId || null, user.name, user.email, user.passwordHash, user.role];
     const result = await this.pool.query(query, values);
     return this.mapRowToUser(result.rows[0]);
   }
@@ -32,6 +32,7 @@ export class UserRepositoryImpl implements UserRepository {
     return {
       id: row.id,
       tenantId: row.tenant_id,
+      name: row.name,
       email: row.email,
       passwordHash: row.password_hash,
       role: row.role,
