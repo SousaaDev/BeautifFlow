@@ -3,7 +3,9 @@ import Cookies from 'js-cookie'
 const rawApiBaseUrl = process.env.NEXT_PUBLIC_API_URL
 const API_BASE_URL = rawApiBaseUrl
   ? rawApiBaseUrl.replace(/\/+$/, '')
-  : 'http://localhost:3000'
+  : process.env.NODE_ENV === 'development'
+  ? 'http://localhost:3000'
+  : ''
 
 export class ApiError extends Error {
   status: number
@@ -42,10 +44,22 @@ async function request<T>(
   const response = await fetch(`${API_BASE_URL}${endpoint}`, {
     ...fetchOptions,
     headers,
+  }).catch((error) => {
+    throw new ApiError(
+      error instanceof Error ? error.message : 'Network request failed',
+      0
+    )
   })
 
   if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}))
+    const text = await response.text().catch(() => '')
+    let errorData: any = {}
+
+    try {
+      errorData = text ? JSON.parse(text) : {}
+    } catch {
+      errorData = {}
+    }
     
     // Handle trial expired or subscription issues
     if (response.status === 403 && errorData.redirect) {
