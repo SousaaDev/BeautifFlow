@@ -1,6 +1,9 @@
 import Cookies from 'js-cookie'
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'
+const rawApiBaseUrl = process.env.NEXT_PUBLIC_API_URL
+const API_BASE_URL = rawApiBaseUrl
+  ? rawApiBaseUrl.replace(/\/+$/, '')
+  : 'http://localhost:3000'
 
 export class ApiError extends Error {
   status: number
