@@ -45,8 +45,9 @@ async function request<T>(
     ...fetchOptions,
     headers,
   }).catch((error) => {
+    const message = error instanceof Error ? error.message : 'Network request failed'
     throw new ApiError(
-      error instanceof Error ? error.message : 'Network request failed',
+      `${message} (${endpoint})`,
       0
     )
   })
@@ -79,7 +80,7 @@ async function request<T>(
     }
 
     // Format error message
-    let errorMessage = 'An error occurred'
+    let errorMessage = ''
     if (errorData.message) {
       errorMessage = errorData.message
     } else if (errorData.error) {
@@ -93,8 +94,19 @@ async function request<T>(
       }
     }
 
+    const trimmedText = text.trim()
+    if (!errorMessage) {
+      if (trimmedText && !trimmedText.startsWith('<')) {
+        errorMessage = trimmedText
+      } else if (response.statusText) {
+        errorMessage = `${response.status} ${response.statusText}`
+      } else {
+        errorMessage = `Request failed with status ${response.status}`
+      }
+    }
+
     throw new ApiError(
-      errorMessage,
+      `${errorMessage} (${endpoint})`,
       response.status
     )
   }
