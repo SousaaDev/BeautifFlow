@@ -14,30 +14,16 @@ const PORT = process.env.PORT || 3000;
 
 // Middlewares
 app.use(helmet());
-const frontendUrls = [
-  ...(process.env.FRONTEND_URL ? process.env.FRONTEND_URL.split(',').map((url) => url.trim()) : []),
-  'http://localhost:3001',
-  'http://localhost:3000',
-]
 
+// CONFIGURAÇÃO DE TESTE: Aceita qualquer origem para validar o erro de CORS
 app.use(
   cors({
-    origin: (origin, callback) => {
-      if (!origin) {
-        callback(null, true)
-        return
-      }
-
-      if (frontendUrls.includes(origin)) {
-        callback(null, true)
-      } else {
-        callback(new Error(`CORS origin denied: ${origin}`))
-      }
-    },
+    origin: true, // Isso reflete a origem da requisição, permitindo o acesso
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     credentials: true,
   })
 );
+
 app.use(express.json());
 app.use(auditMiddleware);
 
