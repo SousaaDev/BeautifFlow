@@ -339,15 +339,22 @@ export const verifyBillingPayment = async (req: Request, res: Response) => {
         .json({ error: 'sessionId or session_id is required' });
     }
 
+    console.log(`Verifying billing payment for session: ${sessionId}`);
+
     const session = await stripe.checkout.sessions.retrieve(sessionId, {
       expand: ['subscription'],
     });
 
+    console.log(`Session status: ${session.status}, payment_status: ${session.payment_status}`);
+
     const planId = session.metadata?.planId as string | undefined;
+    const tenantId = session.metadata?.tenantId as string | undefined;
     const subscriptionStatus =
       typeof session.subscription === 'object' && session.subscription !== null
         ? (session.subscription as any).status
         : undefined;
+
+    console.log(`Subscription status from session: ${subscriptionStatus}`);
 
     const success =
       session.payment_status === 'paid' ||
@@ -357,7 +364,7 @@ export const verifyBillingPayment = async (req: Request, res: Response) => {
 
     let localSuccess = success;
 
-    if (success && session.subscription) {
+    if ((success || session.subscription) && session.subscription) {
       let stripeSubscription: any = session.subscription;
       if (typeof stripeSubscription === 'string') {
         stripeSubscription = await stripe.subscriptions.retrieve(stripeSubscription);
@@ -412,7 +419,9 @@ export const verifyBillingPayment = async (req: Request, res: Response) => {
           currentPeriodEnd: subscriptionData.currentPeriodEnd,
           externalSubscriptionId: subscriptionData.externalSubscriptionId,
         });
+        console.log(`Created new subscription: ${existingSubscription.id} for tenant: ${subscriptionData.tenantId}`);
       } else {
+        console.log(`Updating existing subscription: ${existingSubscription.id}`);
         await subscriptionRepository.update(existingSubscription.id, {
           planId: resolvedPlan.id,
           status: 'active',
@@ -423,14 +432,20 @@ export const verifyBillingPayment = async (req: Request, res: Response) => {
     }
 
     if (!localSuccess) {
-      const tenantId = session.metadata?.tenantId as string | undefined;
-      if (tenantId) {
-        const activeSubscription = await subscriptionRepository.findActiveByTenant(tenantId);
+      const sessionTenantId = tenantId || (session.metadata?.tenantId as string | undefined);
+      if (sessionTenantId) {
+        console.log(`Checking for active subscription for tenant: ${sessionTenantId}`);
+        const activeSubscription = await subscriptionRepository.findActiveByTenant(sessionTenantId);
         if (activeSubscription) {
+          console.log(`Found active subscription: ${activeSubscription.id}`);
           localSuccess = true;
+        } else {
+          console.log(`No active subscription found for tenant: ${sessionTenantId}`);
         }
       }
     }
+
+    console.log(`Returning success: ${localSuccess}, plan: ${planId}`);
 
     res.json({
       success: localSuccess,
