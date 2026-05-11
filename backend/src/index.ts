@@ -15,17 +15,18 @@ const PORT = process.env.PORT || 3000;
 // Middlewares
 app.use(helmet());
 
-const allowedOrigins = [
-  process.env.FRONTEND_URL,
-  'https://frontend-production-7437.up.railway.app', 
+const allowedOrigins: string[] = [
+  process.env.FRONTEND_URL || '',
+  'https://frontend-production-7437.up.railway.app', // Sua URL de produção
   'http://localhost:3000',
   'http://localhost:3001'
-].filter(Boolean) as string[]; 
+].filter(Boolean); // Remove strings vazias e garante apenas strings válidas
 
 app.use(
   cors({
     origin: (origin, callback) => {
-      if (origin && allowedOrigins.includes(origin)) {
+      // Se não houver origin (ex: chamadas internas do próprio server), ou se estiver na lista
+      if (!origin || allowedOrigins.includes(origin)) {
         callback(null, true);
       } else {
         callback(new Error(`CORS origin denied: ${origin}`));
