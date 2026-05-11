@@ -15,9 +15,22 @@ const PORT = process.env.PORT || 3000;
 // Middlewares
 app.use(helmet());
 
+const allowedOrigins = [
+  process.env.FRONTEND_URL,
+  'https://frontend-production-7437.up.railway.app', 
+  'http://localhost:3000',
+  'http://localhost:3001'
+].filter(Boolean) as string[]; 
+
 app.use(
   cors({
-    origin: process.env.FRONTEND_URL, // Isso reflete a origem da requisição, permitindo o acesso
+    origin: (origin, callback) => {
+      if (origin && allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error(`CORS origin denied: ${origin}`));
+      }
+    },
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     credentials: true,
   })
