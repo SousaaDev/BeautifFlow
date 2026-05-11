@@ -15,10 +15,9 @@ const PORT = process.env.PORT || 3000;
 // Middlewares
 app.use(helmet());
 
-// CONFIGURAÇÃO DE TESTE: Aceita qualquer origem para validar o erro de CORS
 app.use(
   cors({
-    origin: true, // Isso reflete a origem da requisição, permitindo o acesso
+    origin: process.env.FRONTEND_URL, // Isso reflete a origem da requisição, permitindo o acesso
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     credentials: true,
   })
