@@ -335,63 +335,6 @@ export const createBillingCheckout = async (req: Request, res: Response) => {
     });
 
     res.json({ checkoutUrl });
-      }
-
-      const externalSubscriptionId =
-        existingSubscription.externalSubscriptionId || stripeSubscription?.id;
-
-      if (!externalSubscriptionId) {
-        // If we still don't have a Stripe subscription id, fallback to checkout
-        existingSubscription = null;
-      }
-    }
-
-    if (existingSubscription) {
-      const updatedSubscription = await stripePaymentService.updateSubscriptionPlan(
-        existingSubscription.externalSubscriptionId as string,
-        {
-          id: membershipPlan.id,
-          name: plan.name,
-          description: plan.description,
-          price: plan.price,
-          billingCycle: plan.billingCycle,
-        }
-      );
-
-      await subscriptionRepository.update(existingSubscription.id, {
-        planId: membershipPlan.id,
-        currentPeriodStart: new Date(
-          updatedSubscription.current_period_start * 1000
-        ),
-        currentPeriodEnd: new Date(
-          updatedSubscription.current_period_end * 1000
-        ),
-        status: 'active',
-      });
-
-      return res.json({
-        planUpdated: true,
-        message: 'Plano alterado com sucesso. A diferença será cobrada no ciclo atual.',
-      });
-    }
-
-    const checkoutUrl = await stripePaymentService.createCheckoutSession({
-      tenantId: tenant.id,
-      customerId: billingCustomer.id,
-      planId: membershipPlan.id,
-      plan: {
-        id: membershipPlan.id,
-        name: membershipPlan.name,
-        description: membershipPlan.description || plan.description,
-        price: membershipPlan.price,
-        billingCycle: membershipPlan.billingCycle,
-      },
-      customerEmail: user.email,
-      successUrl: data.successUrl,
-      cancelUrl: data.cancelUrl,
-    });
-
-    res.json({ checkoutUrl });
   } catch (error) {
     if (error instanceof z.ZodError) {
       return res.status(400).json({ error: error.errors });
