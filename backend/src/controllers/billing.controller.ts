@@ -339,116 +339,113 @@ export const verifyBillingPayment = async (req: Request, res: Response) => {
         .json({ error: 'sessionId or session_id is required' });
     }
 
-    console.log(`Verifying billing payment for session: ${sessionId}`);
+    console.log(`[BILLING] Verifying billing payment for session: ${sessionId}`);
 
     const session = await stripe.checkout.sessions.retrieve(sessionId, {
       expand: ['subscription'],
     });
 
-    console.log(`Session status: ${session.status}, payment_status: ${session.payment_status}`);
+    console.log(`[BILLING] Session status: ${session.status}, payment_status: ${session.payment_status}`);
 
     const planId = session.metadata?.planId as string | undefined;
-    const tenantId = session.metadata?.tenantId as string | undefined;
-    const subscriptionStatus =
-      typeof session.subscription === 'object' && session.subscription !== null
-        ? (session.subscription as any).status
-        : undefined;
+    const tenantIdFromMetadata = session.metadata?.tenantId as string | undefined;
+    
+    let finalTenantId = tenantIdFromMetadata;
+    let finalSuccess = false;
 
-    console.log(`Subscription status from session: ${subscriptionStatus}`);
+    // Try to process the subscription if it exists
+    if (session.subscription) {
+      try {
+        let stripeSubscription: any = session.subscription;
+        if (typeof stripeSubscription === 'string') {
+          stripeSubscription = await stripe.subscriptions.retrieve(stripeSubscription);
+        }
 
-    const success =
-      session.payment_status === 'paid' ||
-      session.status === 'complete' ||
-      subscriptionStatus === 'active' ||
-      subscriptionStatus === 'trialing';
+        console.log(`[BILLING] Stripe subscription status: ${stripeSubscription.status}`);
 
-    let localSuccess = success;
-
-    if ((success || session.subscription) && session.subscription) {
-      let stripeSubscription: any = session.subscription;
-      if (typeof stripeSubscription === 'string') {
-        stripeSubscription = await stripe.subscriptions.retrieve(stripeSubscription);
-      }
-
-      const subscriptionData = await stripePaymentService.handleSubscriptionCreated(
-        stripeSubscription
-      );
-
-      const resolvedPlan = await resolveBillingPlanId(
-        subscriptionData.tenantId,
-        subscriptionData.planId
-      );
-
-      let existingSubscription = await subscriptionRepository.findByExternalSubscriptionId(
-        subscriptionData.externalSubscriptionId
-      );
-
-      if (!existingSubscription) {
-        existingSubscription = await subscriptionRepository.findActiveByTenant(
-          subscriptionData.tenantId
+        const subscriptionData = await stripePaymentService.handleSubscriptionCreated(
+          stripeSubscription
         );
-      }
 
-      if (!existingSubscription) {
-        let customerId = subscriptionData.customerId;
-        const customerExists = await customerRepository.findById(customerId);
+        finalTenantId = subscriptionData.tenantId;
 
-        if (!customerExists) {
-          const stripeCustomerId =
-            typeof stripeSubscription.customer === 'string'
-              ? stripeSubscription.customer
-              : (stripeSubscription.customer as any)?.id;
+        const resolvedPlan = await resolveBillingPlanId(
+          subscriptionData.tenantId,
+          subscriptionData.planId
+        );
 
-          if (!stripeCustomerId) {
-            throw new Error('Stripe customer ID not available for subscription to resolve billing customer');
+        let existingSubscription = await subscriptionRepository.findByExternalSubscriptionId(
+          subscriptionData.externalSubscriptionId
+        );
+
+        if (!existingSubscription) {
+          existingSubscription = await subscriptionRepository.findActiveByTenant(
+            subscriptionData.tenantId
+          );
+        }
+
+        if (!existingSubscription) {
+          let customerId = subscriptionData.customerId;
+          const customerExists = await customerRepository.findById(customerId);
+
+          if (!customerExists) {
+            const stripeCustomerId =
+              typeof stripeSubscription.customer === 'string'
+                ? stripeSubscription.customer
+                : (stripeSubscription.customer as any)?.id;
+
+            if (stripeCustomerId) {
+              const billingCustomer = await getOrCreateBillingCustomerFromStripe(
+                subscriptionData.tenantId,
+                stripeCustomerId
+              );
+              customerId = billingCustomer.id;
+            }
           }
 
-          const billingCustomer = await getOrCreateBillingCustomerFromStripe(
-            subscriptionData.tenantId,
-            stripeCustomerId
-          );
-          customerId = billingCustomer.id;
-        }
-
-        existingSubscription = await subscriptionRepository.create({
-          tenantId: subscriptionData.tenantId,
-          customerId,
-          planId: resolvedPlan.id,
-          status: 'active',
-          currentPeriodStart: subscriptionData.currentPeriodStart,
-          currentPeriodEnd: subscriptionData.currentPeriodEnd,
-          externalSubscriptionId: subscriptionData.externalSubscriptionId,
-        });
-        console.log(`Created new subscription: ${existingSubscription.id} for tenant: ${subscriptionData.tenantId}`);
-      } else {
-        console.log(`Updating existing subscription: ${existingSubscription.id}`);
-        await subscriptionRepository.update(existingSubscription.id, {
-          planId: resolvedPlan.id,
-          status: 'active',
-          currentPeriodStart: subscriptionData.currentPeriodStart,
-          currentPeriodEnd: subscriptionData.currentPeriodEnd,
-        });
-      }
-    }
-
-    if (!localSuccess) {
-      const sessionTenantId = tenantId || (session.metadata?.tenantId as string | undefined);
-      if (sessionTenantId) {
-        console.log(`Checking for active subscription for tenant: ${sessionTenantId}`);
-        const activeSubscription = await subscriptionRepository.findActiveByTenant(sessionTenantId);
-        if (activeSubscription) {
-          console.log(`Found active subscription: ${activeSubscription.id}`);
-          localSuccess = true;
+          existingSubscription = await subscriptionRepository.create({
+            tenantId: subscriptionData.tenantId,
+            customerId,
+            planId: resolvedPlan.id,
+            status: 'active',
+            currentPeriodStart: subscriptionData.currentPeriodStart,
+            currentPeriodEnd: subscriptionData.currentPeriodEnd,
+            externalSubscriptionId: subscriptionData.externalSubscriptionId,
+          });
+          console.log(`[BILLING] Created new subscription: ${existingSubscription.id} for tenant: ${subscriptionData.tenantId}`);
         } else {
-          console.log(`No active subscription found for tenant: ${sessionTenantId}`);
+          console.log(`[BILLING] Updating existing subscription: ${existingSubscription.id}`);
+          await subscriptionRepository.update(existingSubscription.id, {
+            planId: resolvedPlan.id,
+            status: 'active',
+            currentPeriodStart: subscriptionData.currentPeriodStart,
+            currentPeriodEnd: subscriptionData.currentPeriodEnd,
+          });
         }
+
+        // Mark success if subscription exists
+        finalSuccess = true;
+      } catch (subError) {
+        console.error(`[BILLING] Error processing subscription:`, subError);
       }
     }
 
-    console.log(`Returning success: ${localSuccess}, plan: ${planId}`);
+    // Final fallback: check if any active subscription exists for this tenant
+    if (!finalSuccess && finalTenantId) {
+      console.log(`[BILLING] Fallback: checking for active subscription for tenant: ${finalTenantId}`);
+      const activeSubscription = await subscriptionRepository.findActiveByTenant(finalTenantId);
+      if (activeSubscription) {
+        console.log(`[BILLING] Found active subscription via fallback: ${activeSubscription.id}`);
+        finalSuccess = true;
+      } else {
+        console.log(`[BILLING] No active subscription found for tenant: ${finalTenantId}`);
+      }
+    }
+
+    console.log(`[BILLING] Final result - success: ${finalSuccess}, plan: ${planId}`);
 
     res.json({
-      success: localSuccess,
+      success: finalSuccess,
       plan: planId ?? null,
     });
   } catch (error) {
