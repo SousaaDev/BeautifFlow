@@ -17,7 +17,7 @@ app.use(helmet());
 
 const allowedOrigins: string[] = [
   process.env.FRONTEND_URL || '',
-  'https://frontend-production-7437.up.railway.app', // Sua URL de produção
+  'https://backend-production-b077.up.railway.app', // Sua URL de produção
   'http://localhost:3000',
   'http://localhost:3001'
 ].filter(Boolean); // Remove strings vazias e garante apenas strings válidas

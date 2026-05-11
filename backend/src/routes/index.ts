@@ -13,6 +13,7 @@ import loyaltyRoutes from './loyalty.routes';
 import membershipRoutes from './membership.routes';
 import paymentRoutes, { webhookRouter } from './payment.routes';
 import billingRoutes from './billing.routes';
+import settingsRoutes from './settings.routes';
 
 export const setupRoutes = (app: Express) => {
   app.get('/', (_req, res) => {
@@ -33,5 +34,6 @@ export const setupRoutes = (app: Express) => {
   app.use('/api/automations', automationRoutes);
   app.use('/api/analytics', analyticsRoutes);
   app.use('/api/tenants/:tenantId', loyaltyRoutes);
+  app.use('/api/settings', settingsRoutes);
   app.use('/api/payments/webhooks', webhookRouter);
 };

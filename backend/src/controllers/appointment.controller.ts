@@ -9,6 +9,7 @@ import { ServiceRepositoryImpl } from '../models/ServiceRepositoryImpl';
 import { SubscriptionRepositoryImpl } from '../models/SubscriptionRepositoryImpl';
 import { MembershipPlanRepositoryImpl } from '../models/MembershipPlanRepositoryImpl';
 import { AutomationEngine } from '../services/AutomationEngine';
+import { NotificationService } from '../services/NotificationService';
 import { redisClient } from '../infrastructure/redis';
 
 const createAppointmentSchema = z.object({
@@ -56,6 +57,7 @@ const profRepository = new ProfessionalRepositoryImpl(pool);
 const subscriptionRepository = new SubscriptionRepositoryImpl(pool);
 const membershipPlanRepository = new MembershipPlanRepositoryImpl(pool);
 const automationEngine = new AutomationEngine();
+const notificationService = new NotificationService();
 
 // Enhanced conflict validation with buffer time and working hours
 const validateAppointmentConflicts = async (
@@ -274,6 +276,19 @@ export const store = async (req: Request, res: Response) => {
       internalNotes: data.internalNotes,
     });
 
+    // Enviar notificação para o dono sobre novo agendamento
+    try {
+      await notificationService.notifyNewAppointment(tenantId, {
+        customerName: customer.name,
+        serviceName: service.name,
+        professionalName: professional.name,
+        startTime: startTime.toISOString(),
+      });
+    } catch (notificationError) {
+      console.error('Failed to send new appointment notification:', notificationError);
+      // Não falha a criação do agendamento por causa da notificação
+    }
+
     // Atualizar tag e última visita do cliente automaticamente
     try {
       const customerAppointments = await appointmentRepository.findByCustomer(
@@ -375,6 +390,28 @@ export const update = async (req: Request, res: Response) => {
       endTime: data.endTime ? new Date(data.endTime) : undefined,
     }
     const updated = await appointmentRepository.update(id, updateData);
+
+    // Verificar se foi cancelado e enviar notificação
+    if (data.status === 'cancelled' && existing.status !== 'cancelled') {
+      try {
+        // Buscar dados do cliente, serviço e profissional para a notificação
+        const customer = await customerRepository.findById(existing.customerId);
+        const service = await serviceRepository.findByTenantAndId(tenantId, existing.serviceId);
+        const professional = await profRepository.findByTenantAndId(tenantId, existing.professionalId);
+
+        if (customer && service && professional) {
+          await notificationService.notifyCancellation(tenantId, {
+            customerName: customer.name,
+            serviceName: service.name,
+            professionalName: professional.name,
+            startTime: existing.startTime.toISOString(),
+          });
+        }
+      } catch (notificationError) {
+        console.error('Failed to send cancellation notification:', notificationError);
+        // Não falha a atualização por causa da notificação
+      }
+    }
 
     if (data.status === 'completed' && existing.status !== 'completed') {
       automationEngine.runForAppointmentCompleted(tenantId, id).catch(error => {
