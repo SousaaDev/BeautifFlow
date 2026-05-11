@@ -200,6 +200,20 @@ export const createBillingCheckout = async (req: Request, res: Response) => {
       billingCustomer.id
     );
 
+    // Validate if subscription is actually still valid (not expired)
+    if (existingSubscription) {
+      const now = new Date();
+      const periodEnd = new Date(existingSubscription.currentPeriodEnd);
+      
+      console.log(`[CHECKOUT] Found active subscription: ${existingSubscription.id}, period ends at: ${periodEnd}`);
+      
+      // If period has ended, mark as invalid
+      if (periodEnd <= now) {
+        console.log(`[CHECKOUT] Subscription period expired, allowing new checkout`);
+        existingSubscription = null;
+      }
+    }
+
     if (existingSubscription && !existingSubscription.externalSubscriptionId) {
       const stripeSubscription = await stripePaymentService.findActiveStripeSubscriptionByCustomer(
         stripeCustomerId
@@ -262,7 +276,65 @@ export const createBillingCheckout = async (req: Request, res: Response) => {
 
     if (existingSubscription) {
       if (existingSubscription.planId === membershipPlan.id) {
-        return res.status(400).json({ error: 'Voce já está nesse plano' });
+        // Allow upgrade even if on same plan for now - let Stripe handle it
+        console.log(`[CHECKOUT] Subscription exists for same plan, allowing renewal/upgrade`);
+      }
+
+      const externalSubscriptionId =
+        existingSubscription.externalSubscriptionId || stripeSubscription?.id;
+
+      if (!externalSubscriptionId) {
+        // If we still don't have a Stripe subscription id, fallback to checkout
+        existingSubscription = null;
+      }
+    }
+
+    if (existingSubscription) {
+      const updatedSubscription = await stripePaymentService.updateSubscriptionPlan(
+        existingSubscription.externalSubscriptionId as string,
+        {
+          id: membershipPlan.id,
+          name: plan.name,
+          description: plan.description,
+          price: plan.price,
+          billingCycle: plan.billingCycle,
+        }
+      );
+
+      await subscriptionRepository.update(existingSubscription.id, {
+        planId: membershipPlan.id,
+        currentPeriodStart: new Date(
+          updatedSubscription.current_period_start * 1000
+        ),
+        currentPeriodEnd: new Date(
+          updatedSubscription.current_period_end * 1000
+        ),
+        status: 'active',
+      });
+
+      return res.json({
+        planUpdated: true,
+        message: 'Plano alterado com sucesso. A diferença será cobrada no ciclo atual.',
+      });
+    }
+
+    const checkoutUrl = await stripePaymentService.createCheckoutSession({
+      tenantId: tenant.id,
+      customerId: billingCustomer.id,
+      planId: membershipPlan.id,
+      plan: {
+        id: membershipPlan.id,
+        name: membershipPlan.name,
+        description: membershipPlan.description || plan.description,
+        price: membershipPlan.price,
+        billingCycle: membershipPlan.billingCycle,
+      },
+      customerEmail: user.email,
+      successUrl: data.successUrl,
+      cancelUrl: data.cancelUrl,
+    });
+
+    res.json({ checkoutUrl });
       }
 
       const externalSubscriptionId =
