@@ -144,6 +144,10 @@ export class StripePaymentService {
       plan
     );
 
+    const successUrlWithSessionId = successUrl.includes('{CHECKOUT_SESSION_ID}')
+      ? successUrl
+      : `${successUrl}${successUrl.includes('?') ? '&' : '?'}session_id={CHECKOUT_SESSION_ID}`;
+
     // Create checkout session
     const session = await stripe.checkout.sessions.create({
       customer: stripeCustomer,
@@ -154,7 +158,7 @@ export class StripePaymentService {
         },
       ],
       mode: 'subscription',
-      success_url: successUrl,
+      success_url: successUrlWithSessionId,
       cancel_url: cancelUrl,
       subscription_data: {
         metadata: {
