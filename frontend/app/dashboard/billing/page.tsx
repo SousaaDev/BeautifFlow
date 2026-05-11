@@ -128,20 +128,22 @@ export default function BillingPage() {
                 ))}
               </ul>
             </div>
-            <Button
-              className="mt-8 w-full dark:text-white"
-              variant="default"
-              onClick={() => handleSelectPlan(plans[0].id)}
-              disabled={loadingPlan !== null}
-            >
-              {loadingPlan === plans[0].id ? (
-                <span className="inline-flex items-center gap-2">
-                  <Loader2 className="h-4 w-4 animate-spin" /> Carregando...
-                </span>
-              ) : (
-                'Assinar agora'
-              )}
-            </Button>
+            {!isActive && (
+              <Button
+                className="mt-8 w-full dark:text-white"
+                variant="default"
+                onClick={() => handleSelectPlan(plans[0].id)}
+                disabled={loadingPlan !== null}
+              >
+                {loadingPlan === plans[0].id ? (
+                  <span className="inline-flex items-center gap-2">
+                    <Loader2 className="h-4 w-4 animate-spin" /> Carregando...
+                  </span>
+                ) : (
+                  'Assinar agora'
+                )}
+              </Button>
+            )}
           </div>
         </div>
       </section>

@@ -34,7 +34,7 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background dark:bg-slate-920">
       <TrialBanner />
       <Sidebar />
       <main className="lg:pl-64">

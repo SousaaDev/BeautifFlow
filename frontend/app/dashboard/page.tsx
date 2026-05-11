@@ -343,27 +343,43 @@ export default function DashboardPage() {
         </CardHeader>
         <CardContent>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <Button asChild variant="outline" className="h-auto py-4 flex-col gap-2 dark:border-slate-700 dark:bg-slate-950 dark:hover:bg-slate-900">
+            <Button
+              asChild
+              variant="outline"
+              className="h-auto py-6 flex-col gap-3 rounded-3xl border border-slate-200 bg-slate-50 text-slate-950 shadow-xl shadow-slate-900/10 transition hover:bg-slate-100 focus-visible:ring-ring/50 focus-visible:ring-2 dark:border-slate-700 dark:bg-slate-950/95 dark:text-white dark:shadow-slate-950/30 dark:hover:bg-slate-900"
+            >
               <Link href="/dashboard/appointments?new=true">
-                <Calendar className="w-6 h-6 text-primary dark:text-rose-400" />
+                <Calendar className="w-6 h-6 text-rose-400" />
                 <span>Novo agendamento</span>
               </Link>
             </Button>
-            <Button asChild variant="outline" className="h-auto py-4 flex-col gap-2 dark:border-slate-700 dark:bg-slate-950 dark:hover:bg-slate-900">
+            <Button
+              asChild
+              variant="outline"
+              className="h-auto py-6 flex-col gap-3 rounded-3xl border border-slate-200 bg-slate-50 text-slate-950 shadow-xl shadow-slate-900/10 transition hover:bg-slate-100 focus-visible:ring-ring/50 focus-visible:ring-2 dark:border-slate-700 dark:bg-slate-950/95 dark:text-white dark:shadow-slate-950/30 dark:hover:bg-slate-900"
+            >
               <Link href="/dashboard/customers?new=true">
-                <UserCircle className="w-6 h-6 text-primary dark:text-rose-400" />
+                <UserCircle className="w-6 h-6 text-rose-400" />
                 <span>Novo cliente</span>
               </Link>
             </Button>
-            <Button asChild variant="outline" className="h-auto py-4 flex-col gap-2 dark:border-slate-700 dark:bg-slate-950 dark:hover:bg-slate-900">
+            <Button
+              asChild
+              variant="outline"
+              className="h-auto py-6 flex-col gap-3 rounded-3xl border border-slate-200 bg-slate-50 text-slate-950 shadow-xl shadow-slate-900/10 transition hover:bg-slate-100 focus-visible:ring-ring/50 focus-visible:ring-2 dark:border-slate-700 dark:bg-slate-950/95 dark:text-white dark:shadow-slate-950/30 dark:hover:bg-slate-900"
+            >
               <Link href="/dashboard/sales?new=true">
-                <DollarSign className="w-6 h-6 text-primary dark:text-rose-400" />
+                <DollarSign className="w-6 h-6 text-rose-400" />
                 <span>Registrar venda</span>
               </Link>
             </Button>
-            <Button asChild variant="outline" className="h-auto py-4 flex-col gap-2 dark:border-slate-700 dark:bg-slate-950 dark:hover:bg-slate-900">
+            <Button
+              asChild
+              variant="outline"
+              className="h-auto py-6 flex-col gap-3 rounded-3xl border border-slate-200 bg-slate-50 text-slate-950 shadow-xl shadow-slate-900/10 transition hover:bg-slate-100 focus-visible:ring-ring/50 focus-visible:ring-2 dark:border-slate-700 dark:bg-slate-950/95 dark:text-white dark:shadow-slate-950/30 dark:hover:bg-slate-900"
+            >
               <Link href="/dashboard/products">
-                <Package className="w-6 h-6 text-primary dark:text-rose-400" />
+                <Package className="w-6 h-6 text-rose-400" />
                 <span>Ver estoque</span>
               </Link>
             </Button>
