@@ -75,12 +75,12 @@ export default function LoginPage() {
   }, [onSubmit, setValue])
 
   return (
-    <div className="space-y-6 text-slate-950">
+    <div className="space-y-6 text-foreground">
       <div className="space-y-2 text-center">
-        <h2 className="text-3xl font-bold tracking-tight text-slate-950">
+        <h2 className="text-3xl font-bold tracking-tight text-foreground">
           Bem-vindo de volta
         </h2>
-        <p className="text-slate-600">
+        <p className="text-muted-foreground">
           Entre na sua conta para continuar
         </p>
       </div>

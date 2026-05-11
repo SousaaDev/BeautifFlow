@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { CreditCard, Settings as SettingsIcon, User, Building, Bell, Shield } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -22,6 +22,7 @@ import { useTrial } from '@/hooks/use-trial'
 import { useToast } from '@/hooks/use-toast'
 import { authApi } from '@/lib/api/auth'
 import { tenantApi } from '@/lib/api/tenants'
+import { settingsApi, NotificationSettings } from '@/lib/api/settingsApi'
 
 export default function SettingsPage() {
   const { tenant, user, refreshUser } = useAuth()
@@ -34,11 +35,33 @@ export default function SettingsPage() {
   const [companySlug, setCompanySlug] = useState(tenant?.slug || '')
   const [isLoading, setIsLoading] = useState(false)
 
+  // Notification preferences
+  const [notificationsEnabled, setNotificationsEnabled] = useState<NotificationSettings>({
+    newAppointments: true,
+    cancellations: true,
+    weeklyReports: false,
+  })
+
   const [showPasswordDialog, setShowPasswordDialog] = useState(false)
   const [currentPassword, setCurrentPassword] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [isChangingPassword, setIsChangingPassword] = useState(false)
+
+  // Load notification settings on mount
+  useEffect(() => {
+    const loadNotificationSettings = async () => {
+      try {
+        const settings = await settingsApi.getNotificationSettings()
+        setNotificationsEnabled(settings)
+      } catch (error) {
+        console.error('Failed to load notification settings:', error)
+        // Keep default values if loading fails
+      }
+    }
+
+    loadNotificationSettings()
+  }, [])
 
   const hasActiveSubscription = tenant?.status === 'ACTIVE'
   const hasTrial = isTrialing && !isExpired
@@ -82,6 +105,9 @@ export default function SettingsPage() {
           slug: companySlug,
         })
       }
+
+      // Save notification preferences
+      await settingsApi.updateNotificationSettings(notificationsEnabled)
 
       // Refresh user data
       await refreshUser()
@@ -269,21 +295,36 @@ export default function SettingsPage() {
                     <Label className="text-sm">Novos agendamentos</Label>
                     <p className="text-xs text-muted-foreground">Receba notificações quando clientes agendarem</p>
                   </div>
-                  <Switch defaultChecked />
+                  <Switch
+                    checked={notificationsEnabled.newAppointments}
+                    onCheckedChange={(checked) =>
+                      setNotificationsEnabled(prev => ({ ...prev, newAppointments: checked }))
+                    }
+                  />
                 </div>
                 <div className="flex items-center justify-between">
                   <div className="space-y-0.5">
                     <Label className="text-sm">Cancelamentos</Label>
                     <p className="text-xs text-muted-foreground">Avisos sobre cancelamentos de agendamento</p>
                   </div>
-                  <Switch defaultChecked />
+                  <Switch
+                    checked={notificationsEnabled.cancellations}
+                    onCheckedChange={(checked) =>
+                      setNotificationsEnabled(prev => ({ ...prev, cancellations: checked }))
+                    }
+                  />
                 </div>
                 <div className="flex items-center justify-between">
                   <div className="space-y-0.5">
                     <Label className="text-sm">Relatórios semanais</Label>
                     <p className="text-xs text-muted-foreground">Resumo semanal das vendas e agendamentos</p>
                   </div>
-                  <Switch />
+                  <Switch
+                    checked={notificationsEnabled.weeklyReports}
+                    onCheckedChange={(checked) =>
+                      setNotificationsEnabled(prev => ({ ...prev, weeklyReports: checked }))
+                    }
+                  />
                 </div>
               </div>
             </div>
