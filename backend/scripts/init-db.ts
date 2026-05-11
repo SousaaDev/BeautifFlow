@@ -14,8 +14,15 @@ const createTables = async () => {
         name VARCHAR(200) NOT NULL,
         trial_ends_at TIMESTAMP,
         business_hours JSONB,
+        settings JSONB DEFAULT '{}',
         created_at TIMESTAMP DEFAULT NOW()
       );
+    `);
+
+    // Ensure settings exists on existing tables too
+    await pool.query(`
+      ALTER TABLE beauty_shops
+      ADD COLUMN IF NOT EXISTS settings JSONB DEFAULT '{}';
     `);
 
     // Create users table

@@ -331,9 +331,12 @@ export const createBillingCheckout = async (req: Request, res: Response) => {
 
 export const verifyBillingPayment = async (req: Request, res: Response) => {
   try {
-    const sessionId = req.query.sessionId as string;
+    const sessionId =
+      (req.query.sessionId as string) || (req.query.session_id as string);
     if (!sessionId) {
-      return res.status(400).json({ error: 'sessionId is required' });
+      return res
+        .status(400)
+        .json({ error: 'sessionId or session_id is required' });
     }
 
     const session = await stripe.checkout.sessions.retrieve(sessionId, {

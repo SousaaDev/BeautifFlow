@@ -14,7 +14,7 @@ export const billingApi = {
     api.post<CheckoutResponse>('/api/billing/checkout', { planId, successUrl, cancelUrl }),
 
   verifyPayment: (sessionId: string) =>
-    api.get<VerifyResponse>(`/api/billing/verify?sessionId=${sessionId}`),
+    api.get<VerifyResponse>(`/api/billing/verify?session_id=${sessionId}`),
 
   getPortalUrl: () =>
     api.post<{ url: string }>('/api/billing/portal', {}),
