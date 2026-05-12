@@ -111,7 +111,7 @@ export class AppointmentRepositoryImpl implements AppointmentRepository {
       LEFT JOIN professionals p ON a.professional_id = p.id
       WHERE a.tenant_id = $1 
         AND a.professional_id = $2 
-        AND a.status NOT IN ('cancelled')
+        AND a.status NOT IN ('cancelled', 'no_show')
         AND (a.start_time, a.end_time) OVERLAPS ($3::TIMESTAMP, $4::TIMESTAMP)
     `;
     const params: any[] = [tenantId, professionalId, startTime, endTime];
