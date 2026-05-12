@@ -3,7 +3,7 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 
-import { connectDatabase } from './database/connection';
+import { connectDatabase, pool } from './database/connection';
 import { setupRoutes } from './routes';
 import { redisClient } from './infrastructure/redis';
 import { WorkerService } from './infrastructure/workers';
@@ -65,9 +65,23 @@ app.use(auditMiddleware);
 // Routes
 setupRoutes(app);
 
-// Database connection
-connectDatabase();
+const ensureCustomerSchema = async () => {
+  try {
+    await pool.query(`ALTER TABLE customers ADD COLUMN IF NOT EXISTS password_hash VARCHAR(200);`);
+    await pool.query(`ALTER TABLE customers ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMP;`);
+    console.log('Ensured customers schema is up to date');
+  } catch (error) {
+    console.warn('Warning: failed to ensure customers schema:', error);
+  }
+};
 
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
+const startServer = async () => {
+  await connectDatabase();
+  await ensureCustomerSchema();
+
+  app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+  });
+};
+
+startServer();
