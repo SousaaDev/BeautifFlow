@@ -139,7 +139,7 @@ export default function SalesPage() {
       setCustomers(custsData)
       setProfessionals(profsData.filter((p) => p.isActive))
       setServices(servsData.filter((s) => s.isActive))
-      setProducts(prodsData.filter((p) => p.isActive && p.stock > 0))
+      setProducts(prodsData.filter((p) => p.isActive && p.currentStock > 0))
     } catch (error) {
       toast.error('Erro ao carregar dados')
     } finally {
@@ -204,7 +204,7 @@ export default function SalesPage() {
     } else {
       const product = products.find((p) => p.id === itemId)
       if (product) {
-        setValue(`items.${index}.unitPrice`, product.price)
+        setValue(`items.${index}.unitPrice`, product.salePrice)
       }
     }
   }
@@ -483,7 +483,7 @@ export default function SalesPage() {
                                 ))
                               : products.map((p) => (
                                   <SelectItem key={p.id} value={p.id}>
-                                    {p.name} - R$ {p.price.toFixed(2)} (est: {p.stock})
+                                    {p.name} - R$ {p.salePrice.toFixed(2)} (est: {p.currentStock})
                                   </SelectItem>
                                 ))}
                           </SelectContent>

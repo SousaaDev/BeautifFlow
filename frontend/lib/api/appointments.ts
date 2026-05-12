@@ -63,7 +63,7 @@ export const appointmentsApi = {
   getAvailableSlots: (slug: string, serviceId: string, professionalId: string, date: string) =>
     api.get<string[]>(`/api/public/${slug}/available-slots?serviceId=${serviceId}&professionalId=${professionalId}&date=${date}`, { skipAuth: true }),
 
-  createPublic: (slug: string, data: AppointmentFormData & { customerName: string; customerEmail: string; customerPhone?: string }) =>
+  createPublic: (slug: string, data: AppointmentFormData & { customerName: string; customerEmail: string; customerPhone?: string; customerId?: string }) =>
     api.post<Appointment>(`/api/public/${slug}/appointments`, data, { skipAuth: true }),
 }
 
