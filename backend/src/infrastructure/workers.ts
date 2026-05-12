@@ -74,10 +74,34 @@ export class WorkerService {
     console.log('[Worker] LGPD cleanup worker started (weekly on Sunday 02:00)');
   }
 
+  // Completa agendamentos automaticamente quando passam do horário
+  static startAppointmentCompletionWorker(): void {
+    const job = new CronJob('*/5 * * * *', async () => { // A cada 5 minutos
+      console.log('[Worker] Checking for appointments to complete...');
+      try {
+        const query = `
+          UPDATE appointments
+          SET status = 'COMPLETED'
+          WHERE status IN ('SCHEDULED', 'CONFIRMED', 'IN_PROGRESS')
+            AND end_time < NOW()
+        `;
+        const result = await pool.query(query);
+        if (result.rowCount > 0) {
+          console.log(`[Worker] Auto-completed ${result.rowCount} appointment(s)`);
+        }
+      } catch (error) {
+        console.error('[Worker] Appointment completion failed:', error);
+      }
+    });
+    job.start();
+    console.log('[Worker] Appointment completion worker started (every 5 minutes)');
+  }
+
   static startAllWorkers(): void {
     this.startRetentionWorker();
     this.startAnalyticsWorker();
     this.startCleanupWorker();
+    this.startAppointmentCompletionWorker();
     console.log('[Worker] All background jobs started');
   }
 }

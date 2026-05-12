@@ -57,7 +57,7 @@ export interface Service {
   tenantId: string
   name: string
   description: string | null
-  price: number
+  aprice: number
   duration: number // in minutes
   isActive: boolean
   createdAt: string
