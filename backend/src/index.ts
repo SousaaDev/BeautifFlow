@@ -9,6 +9,8 @@ import { redisClient } from './infrastructure/redis';
 import { WorkerService } from './infrastructure/workers';
 import { auditMiddleware } from './middleware/audit.middleware';
 
+console.log('Starting BeautyFlow backend...');
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 
@@ -42,15 +44,23 @@ app.use(auditMiddleware);
 
 // Initialize Infrastructure
 (async () => {
+  let redisConnected = false;
   try {
+    console.log('Attempting to connect to Redis...');
     await redisClient.connect();
     console.log('✓ Redis connected');
+    redisConnected = true;
     WorkerService.startAllWorkers();
   } catch (error) {
     console.warn('⚠️  Redis not available - running without cache and distributed locks');
-    console.warn('⚠️  Background workers disabled');
+    console.warn('⚠️  Some background workers disabled');
     console.warn('⚠️  To enable Redis features: install and start Redis server');
   }
+
+  // Start appointment completion worker regardless of Redis status
+  console.log('Starting appointment completion worker...');
+  WorkerService.startAppointmentCompletionWorker();
+  console.log('✓ Appointment completion worker started');
 })();
 
 // Routes
