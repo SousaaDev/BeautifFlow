@@ -132,6 +132,7 @@ const validateAppointmentConflicts = async (
   const customerConflicts = await appointmentRepository.findByCustomer(tenantId, customerId);
   const overlappingCustomerAppointments = customerConflicts.filter(apt => {
     if (excludeAppointmentId && apt.id === excludeAppointmentId) return false;
+    if (apt.status === 'cancelled' || apt.status === 'no_show') return false;
     const aptStart = new Date(apt.startTime);
     const aptEnd = new Date(apt.endTime);
     return (startTime < aptEnd && endTime > aptStart);
