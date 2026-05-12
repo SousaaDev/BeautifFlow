@@ -79,15 +79,35 @@ export class WorkerService {
     const job = new CronJob('*/5 * * * *', async () => { // A cada 5 minutos
       console.log('[Worker] Checking for appointments to complete...');
       try {
-        const query = `
-          UPDATE appointments
-          SET status = 'COMPLETED'
-          WHERE status IN ('SCHEDULED', 'CONFIRMED', 'IN_PROGRESS')
-            AND end_time < NOW()
-        `;
-        const result = await pool.query(query);
-        if (result.rowCount && result.rowCount > 0) {
-          console.log(`[Worker] Auto-completed ${result.rowCount} appointment(s)`);
+        const result = await pool.query(`
+          UPDATE appointments a
+          SET status = 'completed',
+              price_charged = CASE
+                WHEN COALESCE(a.price_charged, 0) = 0 THEN s.price
+                ELSE a.price_charged
+              END
+          FROM services s
+          WHERE a.service_id = s.id
+            AND a.status IN ('scheduled', 'confirmed', 'in_progress')
+            AND a.end_time < NOW()
+          RETURNING a.id, a.tenant_id, a.price_charged
+        `);
+
+        if (result.rows.length > 0) {
+          for (const row of result.rows) {
+            const amount = parseFloat(row.price_charged || '0');
+            if (amount <= 0) continue;
+
+            await pool.query(`
+              INSERT INTO transactions (id, tenant_id, type, category, amount, payment_method, reference_id, metadata)
+              SELECT gen_random_uuid(), $1, 'IN', 'appointment', $2, 'appointment', $3, $4
+              WHERE NOT EXISTS (
+                SELECT 1 FROM transactions WHERE reference_id = $3 AND category = 'appointment'
+              )
+            `, [row.tenant_id, amount, row.id, JSON.stringify({ source: 'appointment_completion' })]);
+          }
+
+          console.log(`[Worker] Auto-completed ${result.rows.length} appointment(s)`);
         }
       } catch (error) {
         console.error('[Worker] Appointment completion failed:', error);

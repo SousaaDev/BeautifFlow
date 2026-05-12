@@ -8,6 +8,7 @@ import { ProfessionalRepositoryImpl } from '../models/ProfessionalRepositoryImpl
 import { ServiceRepositoryImpl } from '../models/ServiceRepositoryImpl';
 import { SubscriptionRepositoryImpl } from '../models/SubscriptionRepositoryImpl';
 import { MembershipPlanRepositoryImpl } from '../models/MembershipPlanRepositoryImpl';
+import { TransactionRepositoryImpl } from '../models/TransactionRepositoryImpl';
 import { AutomationEngine } from '../services/AutomationEngine';
 import { NotificationService } from '../services/NotificationService';
 import { redisClient } from '../infrastructure/redis';
@@ -56,6 +57,7 @@ const serviceRepository = new ServiceRepositoryImpl(pool);
 const profRepository = new ProfessionalRepositoryImpl(pool);
 const subscriptionRepository = new SubscriptionRepositoryImpl(pool);
 const membershipPlanRepository = new MembershipPlanRepositoryImpl(pool);
+const transactionRepository = new TransactionRepositoryImpl(pool);
 const automationEngine = new AutomationEngine();
 const notificationService = new NotificationService();
 
@@ -274,6 +276,7 @@ export const store = async (req: Request, res: Response) => {
       endTime,
       status: 'scheduled',
       internalNotes: data.internalNotes,
+      priceCharged: service.price,
     });
 
     // Enviar notificação para o dono sobre novo agendamento
@@ -389,7 +392,38 @@ export const update = async (req: Request, res: Response) => {
       startTime: data.startTime ? new Date(data.startTime) : undefined,
       endTime: data.endTime ? new Date(data.endTime) : undefined,
     }
+    if (data.status === 'completed' && existing.status !== 'completed') {
+      if (!existing.priceCharged || existing.priceCharged === 0) {
+        const service = await serviceRepository.findByTenantAndId(tenantId, existing.serviceId);
+        if (service) {
+          updateData.priceCharged = service.price;
+        }
+      }
+    }
+
     const updated = await appointmentRepository.update(id, updateData);
+
+    if (data.status === 'completed' && existing.status !== 'completed') {
+      const appointmentAmount = updateData.priceCharged ?? existing.priceCharged ?? 0;
+      if (appointmentAmount > 0) {
+        const existingTransaction = await pool.query(
+          `SELECT id FROM transactions WHERE reference_id = $1 AND category = 'appointment' LIMIT 1`,
+          [id]
+        );
+
+        if (existingTransaction.rowCount === 0) {
+          await transactionRepository.create({
+            tenantId,
+            type: 'IN',
+            category: 'appointment',
+            amount: appointmentAmount,
+            paymentMethod: 'appointment',
+            referenceId: id,
+            metadata: { appointmentId: id },
+          });
+        }
+      }
+    }
 
     // Verificar se foi cancelado e enviar notificação
     if (data.status === 'cancelled' && existing.status !== 'cancelled') {
