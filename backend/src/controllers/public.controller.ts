@@ -23,6 +23,11 @@ const parseWorkingHours = (range: string) => {
   return { start, end };
 };
 
+const parseDateOnly = (value: string) => {
+  const [year, month, day] = value.split('-').map(Number);
+  return new Date(year, month - 1, day, 0, 0, 0, 0);
+};
+
 const parseTime = (time: string) => {
   const [hours, minutes] = time.split(':').map(Number);
   if (Number.isNaN(hours) || Number.isNaN(minutes)) return null;
@@ -72,7 +77,7 @@ const getBusinessHoursForDate = async (tenantId: string, professionalId: string,
     return null;
   }
 
-  const range = tenant.businessHours[dayKeyFull];
+  const range = tenant.businessHours[dayKeyFull] || tenant.businessHours[dayKeyShort];
   if (!range) {
     return null;
   }
@@ -149,7 +154,7 @@ const getAvailableSlots = async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'Service or professional not found' });
     }
 
-    const selectedDate = new Date(`${query.date}T00:00:00`);
+    const selectedDate = parseDateOnly(query.date);
     const workingHours = await getBusinessHoursForDate(tenant.id, professional.id, selectedDate);
     if (!workingHours) {
       return res.json([]);
