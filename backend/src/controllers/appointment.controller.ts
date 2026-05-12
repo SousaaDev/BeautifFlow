@@ -225,6 +225,7 @@ export const store = async (req: Request, res: Response) => {
 
     if (!validation.isValid) {
       return res.status(409).json({
+        message: `Appointment validation failed: ${validation.errors.join('; ')}`,
         error: 'Appointment validation failed',
         details: validation.errors,
         conflicts: validation.conflicts.map(c => ({

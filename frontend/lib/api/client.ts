@@ -83,6 +83,12 @@ async function request<T>(
     let errorMessage = ''
     if (errorData.message) {
       errorMessage = errorData.message
+    } else if (errorData.details) {
+      if (Array.isArray(errorData.details)) {
+        errorMessage = errorData.details.map((detail: any) => String(detail)).join(', ')
+      } else {
+        errorMessage = String(errorData.details)
+      }
     } else if (errorData.error) {
       if (Array.isArray(errorData.error)) {
         // Handle Zod validation errors
