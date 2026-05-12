@@ -1,34 +1,41 @@
 import { createClient, RedisClientType } from 'redis';
 
 export class RedisClient {
-  private client: RedisClientType | null = null;
+  private client: ReturnType<typeof createClient> | null = null;
   private isConnected: boolean = false;
 
   async connect(): Promise<void> {
+    const clientOptions = process.env.REDIS_URL
+      ? { url: process.env.REDIS_URL }
+      : {
+          socket: {
+            host: process.env.REDIS_HOST || 'localhost',
+            port: parseInt(process.env.REDIS_PORT || '6379'),
+          },
+          password: process.env.REDIS_PASSWORD || undefined,
+        };
+
     try {
-      this.client = createClient({
-        socket: {
-          host: process.env.REDIS_HOST || 'localhost',
-          port: parseInt(process.env.REDIS_PORT || '6379'),
-        },
-        password: process.env.REDIS_PASSWORD || undefined,
-      });
+      this.client = createClient(clientOptions as any);
 
-      this.client.on('error', (err: Error) => {
-        // Só loga erro se ainda não sabemos que Redis não está disponível
-        if (this.isConnected) {
-          console.error('Redis Client Error', err);
-        }
-        this.isConnected = false;
-      });
+      if (this.client) {
+        this.client.on('error', (err: Error) => {
+          // Só loga erro se ainda não sabemos que Redis não está disponível
+          if (this.isConnected) {
+            console.error('Redis Client Error', err);
+          }
+          this.isConnected = false;
+        });
 
-      await this.client.connect();
-      this.isConnected = true;
-      console.log('✓ Redis connected');
+        await this.client.connect();
+        this.isConnected = true;
+        console.log('✓ Redis connected');
+      }
     } catch (error) {
-      console.warn('⚠️  Redis connection failed - running in fallback mode');
+      this.client = null;
       this.isConnected = false;
-      // Não relança a exceção - permite que o servidor continue
+      console.warn('⚠️  Redis connection failed - running in fallback mode');
+      throw error;
     }
   }
 
@@ -80,6 +87,18 @@ export class RedisClient {
     const keys = await this.client.keys(pattern);
     if (keys.length > 0) {
       await this.client.del(keys);
+    }
+  }
+
+  async ping(): Promise<boolean> {
+    if (!this.client || !this.isConnected) {
+      return false;
+    }
+    try {
+      const result = await this.client.ping();
+      return result === 'PONG';
+    } catch {
+      return false;
     }
   }
 
