@@ -9,10 +9,10 @@ export class ProfessionalRepositoryImpl implements ProfessionalRepository {
   async create(professional: Omit<Professional, 'id' | 'createdAt'>): Promise<Professional> {
     const id = uuidv4();
     const query = `
-      INSERT INTO professionals (id, tenant_id, name, phone, commission_rate, buffer_minutes, is_active)
-      VALUES ($1, $2, $3, $4, $5, $6, $7)
+      INSERT INTO professionals (id, tenant_id, name, phone, commission_rate, buffer_minutes, working_hours, is_active)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
       RETURNING id, tenant_id as "tenantId", name, phone, commission_rate as "commissionRate", 
-                buffer_minutes as "bufferMinutes", is_active as "isActive", created_at as "createdAt"
+                buffer_minutes as "bufferMinutes", working_hours as "workingHours", is_active as "isActive", created_at as "createdAt"
     `;
     const result = await this.pool.query(query, [
       id,
@@ -21,6 +21,7 @@ export class ProfessionalRepositoryImpl implements ProfessionalRepository {
       professional.phone || null,
       professional.commissionRate,
       professional.bufferMinutes,
+      professional.workingHours ? JSON.stringify(professional.workingHours) : null,
       professional.isActive,
     ]);
     return result.rows[0];
@@ -29,7 +30,7 @@ export class ProfessionalRepositoryImpl implements ProfessionalRepository {
   async findById(id: string): Promise<Professional | null> {
     const query = `
       SELECT id, tenant_id as "tenantId", name, phone, commission_rate as "commissionRate",
-             buffer_minutes as "bufferMinutes", is_active as "isActive", created_at as "createdAt"
+             buffer_minutes as "bufferMinutes", working_hours as "workingHours", is_active as "isActive", created_at as "createdAt"
       FROM professionals WHERE id = $1
     `;
     const result = await this.pool.query(query, [id]);
@@ -39,7 +40,7 @@ export class ProfessionalRepositoryImpl implements ProfessionalRepository {
   async findByTenant(tenantId: string): Promise<Professional[]> {
     const query = `
       SELECT id, tenant_id as "tenantId", name, phone, commission_rate as "commissionRate",
-             buffer_minutes as "bufferMinutes", is_active as "isActive", created_at as "createdAt"
+             buffer_minutes as "bufferMinutes", working_hours as "workingHours", is_active as "isActive", created_at as "createdAt"
       FROM professionals WHERE tenant_id = $1 AND is_active = true
     `;
     const result = await this.pool.query(query, [tenantId]);
@@ -49,7 +50,7 @@ export class ProfessionalRepositoryImpl implements ProfessionalRepository {
   async findByTenantAndId(tenantId: string, id: string): Promise<Professional | null> {
     const query = `
       SELECT id, tenant_id as "tenantId", name, phone, commission_rate as "commissionRate",
-             buffer_minutes as "bufferMinutes", is_active as "isActive", created_at as "createdAt"
+             buffer_minutes as "bufferMinutes", working_hours as "workingHours", is_active as "isActive", created_at as "createdAt"
       FROM professionals WHERE id = $1 AND tenant_id = $2
     `;
     const result = await this.pool.query(query, [id, tenantId]);
@@ -76,6 +77,10 @@ export class ProfessionalRepositoryImpl implements ProfessionalRepository {
     if (data.bufferMinutes !== undefined) {
       fields.push(`buffer_minutes = $${paramCount++}`);
       values.push(data.bufferMinutes);
+    }
+    if (data.workingHours !== undefined) {
+      fields.push(`working_hours = $${paramCount++}`);
+      values.push(data.workingHours ? JSON.stringify(data.workingHours) : null);
     }
     if (data.isActive !== undefined) {
       fields.push(`is_active = $${paramCount++}`);
