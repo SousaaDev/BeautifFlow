@@ -9,6 +9,7 @@ import { ServiceRepositoryImpl } from '../models/ServiceRepositoryImpl';
 import { SubscriptionRepositoryImpl } from '../models/SubscriptionRepositoryImpl';
 import { MembershipPlanRepositoryImpl } from '../models/MembershipPlanRepositoryImpl';
 import { TransactionRepositoryImpl } from '../models/TransactionRepositoryImpl';
+import { TenantRepositoryImpl } from '../models/TenantRepositoryImpl';
 import { AutomationEngine } from '../services/AutomationEngine';
 import { NotificationService } from '../services/NotificationService';
 import { redisClient } from '../infrastructure/redis';
@@ -55,14 +56,46 @@ const appointmentRepository = new AppointmentRepositoryImpl(pool);
 const customerRepository = new CustomerRepositoryImpl(pool);
 const serviceRepository = new ServiceRepositoryImpl(pool);
 const profRepository = new ProfessionalRepositoryImpl(pool);
+const tenantRepository = new TenantRepositoryImpl(pool);
 const subscriptionRepository = new SubscriptionRepositoryImpl(pool);
 const membershipPlanRepository = new MembershipPlanRepositoryImpl(pool);
 const transactionRepository = new TransactionRepositoryImpl(pool);
 const automationEngine = new AutomationEngine();
 const notificationService = new NotificationService();
 
+const parseBusinessHours = (range: string) => {
+  const [start, end] = range.split('-').map((part) => part.trim());
+  if (!start || !end) return null;
+  return { start, end };
+};
+
+const getWorkingHoursForDate = async (tenantId: string, professionalId: string, date: Date) => {
+  const professional = await profRepository.findByTenantAndId(tenantId, professionalId);
+  const dayKeyFull = date.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
+  const dayKeyShort = date.toLocaleDateString('en-US', { weekday: 'short' }).toLowerCase();
+
+  if (professional?.workingHours) {
+    const professionalHours = professional.workingHours[dayKeyFull] || professional.workingHours[dayKeyShort];
+    if (professionalHours) {
+      return professionalHours.isWorking ? professionalHours : null;
+    }
+  }
+
+  const tenant = await tenantRepository.findById(tenantId);
+  if (!tenant) {
+    return null;
+  }
+
+  const businessHoursValue = tenant.businessHours[dayKeyFull];
+  if (!businessHoursValue) {
+    return null;
+  }
+
+  return parseBusinessHours(businessHoursValue);
+};
+
 // Enhanced conflict validation with buffer time and working hours
-const validateAppointmentConflicts = async (
+export const validateAppointmentConflicts = async (
   tenantId: string,
   professionalId: string,
   customerId: string,
@@ -88,25 +121,30 @@ const validateAppointmentConflicts = async (
   }
 
   // 3. Check working hours (professional and salon)
-  const dayOfWeek = startTime.toLocaleDateString('en-US', { weekday: 'short' }).toLowerCase();
+  const workingHours = await getWorkingHoursForDate(tenantId, professionalId, startTime);
   const professional = await profRepository.findByTenantAndId(tenantId, professionalId);
 
-  if (professional?.workingHours?.[dayOfWeek]) {
-    const workingHours = professional.workingHours[dayOfWeek];
-    if (!workingHours.isWorking) {
-      errors.push(`Professional is not working on ${dayOfWeek}`);
-    } else {
-      const workStart = new Date(startTime);
-      const workEnd = new Date(startTime);
-      const [startHour, startMin] = workingHours.start.split(':').map(Number);
-      const [endHour, endMin] = workingHours.end.split(':').map(Number);
+  if (professional?.workingHours) {
+    const dayKeyFull = startTime.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
+    const dayKeyShort = startTime.toLocaleDateString('en-US', { weekday: 'short' }).toLowerCase();
+    const professionalHours = professional.workingHours[dayKeyFull] || professional.workingHours[dayKeyShort];
 
-      workStart.setHours(startHour, startMin, 0, 0);
-      workEnd.setHours(endHour, endMin, 0, 0);
+    if (professionalHours && !professionalHours.isWorking) {
+      errors.push(`Professional is not working on ${dayKeyFull}`);
+    }
+  }
 
-      if (startTime < workStart || endTime > workEnd) {
-        errors.push(`Appointment time (${startTime.toLocaleTimeString()} - ${endTime.toLocaleTimeString()}) is outside professional working hours (${workingHours.start} - ${workingHours.end})`);
-      }
+  if (workingHours) {
+    const workStart = new Date(startTime);
+    const workEnd = new Date(startTime);
+    const [startHour, startMin] = workingHours.start.split(':').map(Number);
+    const [endHour, endMin] = workingHours.end.split(':').map(Number);
+
+    workStart.setHours(startHour, startMin, 0, 0);
+    workEnd.setHours(endHour, endMin, 0, 0);
+
+    if (startTime < workStart || endTime > workEnd) {
+      errors.push(`Appointment time (${startTime.toLocaleTimeString()} - ${endTime.toLocaleTimeString()}) is outside working hours (${workingHours.start} - ${workingHours.end})`);
     }
   }
 
