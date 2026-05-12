@@ -22,6 +22,15 @@ export class AnalyticsRepositoryImpl {
       WHERE s.tenant_id = $1 AND s.created_at >= $2 AND s.created_at <= $3
     `, [tenantId, startDate, endDate]);
 
+    const completedAppointmentsRevenueResult = await this.pool.query(`
+      SELECT COALESCE(SUM(price_charged), 0) as total
+      FROM appointments
+      WHERE tenant_id = $1
+        AND status = 'completed'
+        AND start_time >= $2
+        AND start_time <= $3
+    `, [tenantId, startDate, endDate]);
+
     const appointmentResult = await this.pool.query(`
       SELECT
         COUNT(*) as total,
@@ -41,7 +50,8 @@ export class AnalyticsRepositoryImpl {
       WHERE tenant_id = $1
     `, [tenantId, startDate, endDate]);
 
-    const totalRevenue = parseFloat(totalRevenueResult.rows[0]?.total || 0);
+    const completedAppointmentRevenue = parseFloat(completedAppointmentsRevenueResult.rows[0]?.total || 0);
+    const totalRevenue = parseFloat(totalRevenueResult.rows[0]?.total || 0) + completedAppointmentRevenue;
     const appointmentCount = parseInt(appointmentResult.rows[0]?.total || 0);
     const averageTicket = appointmentCount > 0 ? totalRevenue / appointmentCount : 0;
 
@@ -49,7 +59,7 @@ export class AnalyticsRepositoryImpl {
       period: { startDate, endDate },
       revenue: {
         total: totalRevenue,
-        fromServices: parseFloat(totalRevenueResult.rows[0]?.from_services || 0),
+        fromServices: parseFloat(totalRevenueResult.rows[0]?.from_services || 0) + completedAppointmentRevenue,
         fromProducts: parseFloat(totalRevenueResult.rows[0]?.from_products || 0),
         fromSubscriptions: parseFloat(totalRevenueResult.rows[0]?.from_subscriptions || 0),
       },
