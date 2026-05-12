@@ -7,15 +7,16 @@ export class CustomerRepositoryImpl implements CustomerRepository {
 
   async create(customer: Omit<Customer, 'id' | 'createdAt'>): Promise<Customer> {
     const query = `
-      INSERT INTO customers (tenant_id, name, phone, email, tags, last_visit)
-      VALUES ($1, $2, $3, $4, $5, $6)
-      RETURNING id, tenant_id, name, phone, email, tags, last_visit, created_at
+      INSERT INTO customers (tenant_id, name, phone, email, password_hash, tags, last_visit)
+      VALUES ($1, $2, $3, $4, $5, $6, $7)
+      RETURNING id, tenant_id, name, phone, email, password_hash, tags, last_visit, created_at, deleted_at
     `;
     const values = [
       customer.tenantId,
       customer.name,
       customer.phone || null,
       customer.email || null,
+      customer.passwordHash || null,
       customer.tags || null,
       customer.lastVisit || null,
     ];
@@ -26,6 +27,18 @@ export class CustomerRepositoryImpl implements CustomerRepository {
   async findById(id: string): Promise<Customer | null> {
     const query = 'SELECT * FROM customers WHERE id = $1';
     const result = await this.pool.query(query, [id]);
+    return result.rows.length ? this.mapRowToCustomer(result.rows[0]) : null;
+  }
+
+  async findByEmail(tenantId: string, email: string): Promise<Customer | null> {
+    const query = `
+      SELECT *
+      FROM customers
+      WHERE tenant_id = $1
+        AND LOWER(email) = LOWER($2)
+      LIMIT 1
+    `;
+    const result = await this.pool.query(query, [tenantId, email]);
     return result.rows.length ? this.mapRowToCustomer(result.rows[0]) : null;
   }
 
@@ -85,6 +98,10 @@ export class CustomerRepositoryImpl implements CustomerRepository {
       values.push(customer.email);
       fields.push(`email = $${values.length}`);
     }
+    if (customer.passwordHash !== undefined) {
+      values.push(customer.passwordHash);
+      fields.push(`password_hash = $${values.length}`);
+    }
     if (customer.tags !== undefined) {
       values.push(customer.tags);
       fields.push(`tags = $${values.length}`);
@@ -102,7 +119,7 @@ export class CustomerRepositoryImpl implements CustomerRepository {
       UPDATE customers
       SET ${fields.join(', ')}
       WHERE id = $${values.length + 1}
-      RETURNING id, tenant_id, name, phone, email, tags, last_visit, created_at
+      RETURNING id, tenant_id, name, phone, email, password_hash, tags, last_visit, created_at, deleted_at
     `;
     values.push(id);
 
@@ -142,6 +159,7 @@ export class CustomerRepositoryImpl implements CustomerRepository {
       name: row.name,
       phone: row.phone,
       email: row.email,
+      passwordHash: row.password_hash || undefined,
       tags: row.tags,
       lastVisit: row.last_visit,
       createdAt: row.created_at,

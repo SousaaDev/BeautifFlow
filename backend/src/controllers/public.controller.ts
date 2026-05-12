@@ -1,5 +1,7 @@
 import { Request, Response } from 'express';
 import { z } from 'zod';
+import bcrypt from 'bcryptjs';
+import jwt from 'jsonwebtoken';
 import { pool } from '../database/connection';
 import { TenantRepositoryImpl } from '../models/TenantRepositoryImpl';
 import { ProfessionalRepositoryImpl } from '../models/ProfessionalRepositoryImpl';
@@ -13,6 +15,15 @@ const professionalRepository = new ProfessionalRepositoryImpl(pool);
 const serviceRepository = new ServiceRepositoryImpl(pool);
 const appointmentRepository = new AppointmentRepositoryImpl(pool);
 const customerRepository = new CustomerRepositoryImpl(pool);
+
+const signCustomerToken = (payload: object, expiresIn = '7d') => {
+  const secret = process.env.JWT_SECRET;
+  if (!secret) {
+    throw new Error('JWT_SECRET is not configured');
+  }
+  const options: jwt.SignOptions = { expiresIn: expiresIn as jwt.SignOptions['expiresIn'] };
+  return jwt.sign(payload, secret as jwt.Secret, options);
+};
 
 const getDateKey = (date: Date) =>
   date.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
@@ -137,6 +148,24 @@ const availableSlotsSchema = z.object({
   serviceId: z.string().uuid(),
   professionalId: z.string().uuid(),
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+});
+
+const registerCustomerSchema = z.object({
+  slug: z.string(),
+  name: z.string().min(2),
+  email: z.string().email(),
+  phone: z.string().optional(),
+  password: z.string().min(6),
+  confirmPassword: z.string(),
+}).refine((data) => data.password === data.confirmPassword, {
+  message: 'As senhas nao coincidem',
+  path: ['confirmPassword'],
+});
+
+const loginCustomerSchema = z.object({
+  slug: z.string(),
+  email: z.string().email(),
+  password: z.string().min(6),
 });
 
 const getAvailableSlots = async (req: Request, res: Response) => {
@@ -304,8 +333,100 @@ const createPublicAppointment = async (req: Request, res: Response) => {
   }
 };
 
+const registerCustomer = async (req: Request, res: Response) => {
+  try {
+    const data = registerCustomerSchema.parse(req.body);
+    const tenant = await tenantRepository.findBySlug(data.slug);
+    if (!tenant) {
+      return res.status(404).json({ error: 'Salon not found' });
+    }
+
+    const existingCustomer = await customerRepository.findByEmail(tenant.id, data.email);
+    const hashedPassword = await bcrypt.hash(data.password, 10);
+
+    let customer;
+    if (existingCustomer) {
+      if (existingCustomer.passwordHash) {
+        return res.status(409).json({ error: 'Email already registered' });
+      }
+
+      customer = await customerRepository.update(existingCustomer.id, {
+        name: data.name,
+        phone: data.phone || existingCustomer.phone,
+        passwordHash: hashedPassword,
+      });
+    } else {
+      customer = await customerRepository.create({
+        tenantId: tenant.id,
+        name: data.name,
+        email: data.email,
+        phone: data.phone,
+        passwordHash: hashedPassword,
+      });
+    }
+
+    const token = signCustomerToken({ customerId: customer.id, tenantId: tenant.id });
+
+    res.status(201).json({
+      token,
+      customer: {
+        id: customer.id,
+        name: customer.name,
+        email: customer.email,
+        phone: customer.phone,
+      },
+    });
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: error.errors });
+    }
+    console.error('Error registering public customer:', error);
+    res.status(500).json({ error: 'Failed to register customer' });
+  }
+};
+
+const loginCustomer = async (req: Request, res: Response) => {
+  try {
+    const data = loginCustomerSchema.parse(req.body);
+    const tenant = await tenantRepository.findBySlug(data.slug);
+    if (!tenant) {
+      return res.status(404).json({ error: 'Salon not found' });
+    }
+
+    const customer = await customerRepository.findByEmail(tenant.id, data.email);
+    if (!customer || !customer.passwordHash) {
+      return res.status(401).json({ error: 'Credenciais invalidas' });
+    }
+
+    const passwordMatches = await bcrypt.compare(data.password, customer.passwordHash);
+    if (!passwordMatches) {
+      return res.status(401).json({ error: 'Credenciais invalidas' });
+    }
+
+    const token = signCustomerToken({ customerId: customer.id, tenantId: tenant.id });
+
+    res.json({
+      token,
+      customer: {
+        id: customer.id,
+        name: customer.name,
+        email: customer.email,
+        phone: customer.phone,
+      },
+    });
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: error.errors });
+    }
+    console.error('Error logging in public customer:', error);
+    res.status(500).json({ error: 'Failed to login customer' });
+  }
+};
+
 export {
   getSalonData,
   getAvailableSlots,
   createPublicAppointment,
+  registerCustomer,
+  loginCustomer,
 };

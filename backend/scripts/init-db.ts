@@ -47,6 +47,7 @@ const createTables = async () => {
         name VARCHAR(200) NOT NULL,
         phone VARCHAR(20),
         email VARCHAR(200),
+        password_hash VARCHAR(200),
         tags TEXT[],
         last_visit TIMESTAMP,
         deleted_at TIMESTAMP,
@@ -55,6 +56,7 @@ const createTables = async () => {
     `);
 
     await pool.query(`ALTER TABLE customers ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMP;`);
+    await pool.query(`ALTER TABLE customers ADD COLUMN IF NOT EXISTS password_hash VARCHAR(200);`);
 
     // Create professionals table
     await pool.query(`

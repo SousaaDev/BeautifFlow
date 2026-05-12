@@ -57,7 +57,7 @@ export interface Service {
   tenantId: string
   name: string
   description: string | null
-  aprice: number
+  price: number
   duration: number // in minutes
   isActive: boolean
   createdAt: string
@@ -73,6 +73,8 @@ export interface Product {
   costPrice?: number | null
   currentStock: number
   minThreshold: number
+  price?: number
+  stock?: number
   isActive: boolean
   createdAt: string
   updatedAt?: string
@@ -149,14 +151,14 @@ export interface CheckoutResponse {
 // Form Types
 export interface ProfessionalFormData {
   name: string
-  email: string
+  email?: string
   phone?: string
   isActive: boolean
 }
 
 export interface CustomerFormData {
   name: string
-  email: string
+  email?: string
   phone?: string
   birthDate?: string
   notes?: string
@@ -167,7 +169,7 @@ export interface ServiceFormData {
   description?: string
   price: number
   duration: number
-  isActive: boolean
+  isActive?: boolean
 }
 
 export interface ProductFormData {

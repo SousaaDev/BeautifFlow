@@ -1,8 +1,8 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useParams } from 'next/navigation'
-import { useForm, Controller } from 'react-hook-form'
+import { useParams, useRouter } from 'next/navigation'
+import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { toast } from 'sonner'
@@ -40,6 +40,14 @@ const bookingSchema = z.object({
 
 type BookingFormData = z.infer<typeof bookingSchema>
 
+type PublicCustomer = {
+  id: string
+  name: string
+  email: string
+  phone?: string | null
+  token: string
+}
+
 type Step = 'service' | 'professional' | 'datetime' | 'info' | 'success'
 
 export default function PublicBookingPage() {
@@ -52,6 +60,7 @@ export default function PublicBookingPage() {
   const [professionals, setProfessionals] = useState<Professional[]>([])
   const [services, setServices] = useState<Service[]>([])
 
+  const router = useRouter()
   const [step, setStep] = useState<Step>('service')
   const [selectedService, setSelectedService] = useState<Service | null>(null)
   const [selectedProfessional, setSelectedProfessional] = useState<Professional | null>(null)
@@ -60,10 +69,13 @@ export default function PublicBookingPage() {
   const [availableSlots, setAvailableSlots] = useState<string[]>([])
   const [isLoadingSlots, setIsLoadingSlots] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [loggedCustomer, setLoggedCustomer] = useState<PublicCustomer | null>(null)
 
   const {
     register,
     handleSubmit,
+    setValue,
+    reset,
     formState: { errors },
   } = useForm<BookingFormData>({
     resolver: zodResolver(bookingSchema),
@@ -85,6 +97,25 @@ export default function PublicBookingPage() {
 
     loadSalonData()
   }, [slug])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+
+    const storedCustomer = window.localStorage.getItem('beautyflow_public_customer')
+    if (storedCustomer) {
+      try {
+        const customer = JSON.parse(storedCustomer) as PublicCustomer
+        setLoggedCustomer(customer)
+        reset({
+          customerName: customer.name,
+          customerEmail: customer.email,
+          customerPhone: customer.phone ?? undefined,
+        })
+      } catch {
+        window.localStorage.removeItem('beautyflow_public_customer')
+      }
+    }
+  }, [reset])
 
   useEffect(() => {
     const loadAvailableSlots = async () => {
@@ -120,7 +151,7 @@ export default function PublicBookingPage() {
       startTime.setHours(hours, minutes, 0, 0)
 
       await appointmentsApi.createPublic(slug, {
-        customerId: '', // Will be created or matched by backend
+        customerId: loggedCustomer?.id ?? '',
         professionalId: selectedProfessional.id,
         serviceId: selectedService.id,
         startTime: startTime.toISOString(),
@@ -136,6 +167,12 @@ export default function PublicBookingPage() {
     } finally {
       setIsSubmitting(false)
     }
+  }
+
+  const logoutCustomer = () => {
+    window.localStorage.removeItem('beautyflow_public_customer')
+    setLoggedCustomer(null)
+    reset({ customerName: '', customerEmail: '', customerPhone: undefined })
   }
 
   const goBack = () => {
@@ -237,6 +274,35 @@ export default function PublicBookingPage() {
         <p className="text-muted-foreground mt-2">
           Agende seu horario de forma rapida e facil
         </p>
+      </div>
+
+      <div className="flex flex-col gap-3 md:flex-row items-center justify-center">
+        {loggedCustomer ? (
+          <div className="rounded-lg border border-primary/20 bg-primary/5 p-4 text-center">
+            <p className="text-sm text-muted-foreground">Cliente logado</p>
+            <p className="font-medium">{loggedCustomer.name}</p>
+            <p className="text-sm">{loggedCustomer.email}</p>
+            <button
+              type="button"
+              onClick={logoutCustomer}
+              className="mt-2 text-sm text-primary underline"
+            >
+              Sair da conta
+            </button>
+          </div>
+        ) : (
+          <div className="grid gap-2 sm:grid-cols-2">
+            <Button
+              variant="outline"
+              onClick={() => router.push(`/agendar/${slug}/login`)}
+            >
+              Ja tenho conta
+            </Button>
+            <Button onClick={() => router.push(`/agendar/${slug}/register`)}>
+              Criar conta
+            </Button>
+          </div>
+        )}
       </div>
 
       {/* Progress */}
@@ -439,6 +505,13 @@ export default function PublicBookingPage() {
       {step === 'info' && (
         <div className="max-w-md mx-auto space-y-6">
           <h2 className="text-xl font-semibold text-center">Seus dados</h2>
+
+          {loggedCustomer && (
+            <div className="rounded-lg border border-primary/20 bg-primary/5 p-4 text-sm text-foreground">
+              <p className="font-medium">Você está logado como {loggedCustomer.name}</p>
+              <p className="text-muted-foreground">O agendamento será registrado com sua conta.</p>
+            </div>
+          )}
 
           <Card>
             <CardContent className="pt-6 space-y-2 text-sm">
