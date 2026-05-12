@@ -86,7 +86,7 @@ export class WorkerService {
             AND end_time < NOW()
         `;
         const result = await pool.query(query);
-        if (result.rowCount > 0) {
+        if (result.rowCount && result.rowCount > 0) {
           console.log(`[Worker] Auto-completed ${result.rowCount} appointment(s)`);
         }
       } catch (error) {

@@ -48,7 +48,6 @@ app.use(auditMiddleware);
   try {
     console.log('Attempting to connect to Redis...');
     await redisClient.connect();
-    console.log('✓ Redis connected');
     redisConnected = true;
     WorkerService.startAllWorkers();
   } catch (error) {

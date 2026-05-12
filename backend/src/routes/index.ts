@@ -14,10 +14,20 @@ import membershipRoutes from './membership.routes';
 import paymentRoutes, { webhookRouter } from './payment.routes';
 import billingRoutes from './billing.routes';
 import settingsRoutes from './settings.routes';
+import { redisClient } from '../infrastructure/redis';
 
 export const setupRoutes = (app: Express) => {
   app.get('/', (_req, res) => {
     res.json({ status: 'ok', service: 'BarberFlow API', version: '1.0.0' });
+  });
+
+  app.get('/api/redis/ping', async (_req, res) => {
+    try {
+      const healthy = await redisClient.ping();
+      res.json({ redis: healthy ? 'ok' : 'down' });
+    } catch (error) {
+      res.status(500).json({ redis: 'error', error: String(error) });
+    }
   });
 
   app.use('/api/auth', authRoutes);
