@@ -19,7 +19,13 @@ interface PublicCustomerAuthResponse {
 
 export const publicApi = {
   getSalonData: (slug: string) =>
-    api.get<PublicSalonData>(`/api/public/${slug}`, { skipAuth: true }),
+    api.get<PublicSalonData>(`/api/public/${slug}`, { skipAuth: true }).then((data) => ({
+      ...data,
+      services: data.services.map((service) => ({
+        ...service,
+        price: typeof service.price === 'number' ? service.price : Number(service.price ?? 0),
+      })),
+    })),
 
   registerCustomer: (data: {
     slug: string
