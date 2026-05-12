@@ -61,7 +61,7 @@
     │                                │
     │  Planos disponíveis:           │
     │  🟢 Starter - R$ 29,90/mês        │
-    │  🔵 Pro - R$ 39,90/mês           │
+    │  🔵 Pro - R$/mês           │
     │  🟣 Enterprise - R$ 50,90/mês    │
     │                                │
     │  [Escolher Plano] → Stripe     │

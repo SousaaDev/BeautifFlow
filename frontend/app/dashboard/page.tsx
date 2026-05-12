@@ -50,12 +50,16 @@ export default function DashboardPage() {
         const monthStart = startOfMonth(today)
         const monthEnd = endOfMonth(today)
 
-        const [professionals, customers, appointments, sales] = await Promise.all([
+        const [professionals, customers, todayAppointmentsData, monthlyAppointments, sales] = await Promise.all([
           professionalsApi.list(tenant.id),
           customersApi.list(tenant.id),
           appointmentsApi.list(tenant.id, {
             startDate: startOfDay(today).toISOString(),
             endDate: endOfDay(today).toISOString(),
+          }),
+          appointmentsApi.list(tenant.id, {
+            startDate: monthStart.toISOString(),
+            endDate: monthEnd.toISOString(),
           }),
           salesApi.list(tenant.id, {
             startDate: monthStart.toISOString(),
@@ -63,16 +67,24 @@ export default function DashboardPage() {
           }),
         ])
 
-        const monthlyRevenue = sales.reduce((acc, sale) => acc + sale.finalAmount, 0)
+        // Calculate revenue from sales
+        const salesRevenue = sales.reduce((acc, sale) => acc + sale.finalAmount, 0)
+        
+        // Calculate revenue from completed appointments
+        const appointmentsRevenue = monthlyAppointments
+          .filter((apt) => apt.status === 'COMPLETED')
+          .reduce((acc, apt) => acc + (apt.service?.price || 0), 0)
+        
+        const monthlyRevenue = salesRevenue + appointmentsRevenue
 
         setStats({
           totalProfessionals: professionals.length,
           totalCustomers: customers.length,
-          todayAppointments: appointments.length,
+          todayAppointments: todayAppointmentsData.length,
           monthlyRevenue,
         })
 
-        setTodayAppointments(appointments.slice(0, 5))
+        setTodayAppointments(todayAppointmentsData.slice(0, 5))
         setRecentSales(sales.slice(0, 5))
       } catch (error) {
         console.error('Error fetching dashboard data:', error)

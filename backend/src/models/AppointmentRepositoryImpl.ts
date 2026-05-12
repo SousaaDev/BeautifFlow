@@ -39,7 +39,7 @@ export class AppointmentRepositoryImpl implements AppointmentRepository {
              a.status, a.internal_notes as "internalNotes", a.price_charged as "priceCharged", 
              a.created_at as "createdAt",
              json_build_object('id', c.id, 'name', c.name, 'email', c.email) as "customer",
-             json_build_object('id', s.id, 'name', s.name, 'duration', s.duration_minutes) as "service",
+             json_build_object('id', s.id, 'name', s.name, 'price', s.price, 'duration', s.duration_minutes) as "service",
              json_build_object('id', p.id, 'name', p.name) as "professional"
       FROM appointments a
       LEFT JOIN customers c ON a.customer_id = c.id
@@ -58,7 +58,7 @@ export class AppointmentRepositoryImpl implements AppointmentRepository {
              a.status, a.internal_notes as "internalNotes", a.price_charged as "priceCharged", 
              a.created_at as "createdAt",
              json_build_object('id', c.id, 'name', c.name, 'email', c.email) as "customer",
-             json_build_object('id', s.id, 'name', s.name, 'duration', s.duration_minutes) as "service",
+             json_build_object('id', s.id, 'name', s.name, 'price', s.price, 'duration', s.duration_minutes) as "service",
              json_build_object('id', p.id, 'name', p.name) as "professional"
       FROM appointments a
       LEFT JOIN customers c ON a.customer_id = c.id
@@ -78,7 +78,7 @@ export class AppointmentRepositoryImpl implements AppointmentRepository {
              a.status, a.internal_notes as "internalNotes", a.price_charged as "priceCharged", 
              a.created_at as "createdAt",
              json_build_object('id', c.id, 'name', c.name, 'email', c.email) as "customer",
-             json_build_object('id', s.id, 'name', s.name, 'duration', s.duration_minutes) as "service",
+             json_build_object('id', s.id, 'name', s.name, 'price', s.price, 'duration', s.duration_minutes) as "service",
              json_build_object('id', p.id, 'name', p.name) as "professional"
       FROM appointments a
       LEFT JOIN customers c ON a.customer_id = c.id
@@ -103,7 +103,7 @@ export class AppointmentRepositoryImpl implements AppointmentRepository {
              a.status, a.internal_notes as "internalNotes", a.price_charged as "priceCharged", 
              a.created_at as "createdAt",
              json_build_object('id', c.id, 'name', c.name, 'email', c.email) as "customer",
-             json_build_object('id', s.id, 'name', s.name, 'duration', s.duration_minutes) as "service",
+             json_build_object('id', s.id, 'name', s.name, 'price', s.price, 'duration', s.duration_minutes) as "service",
              json_build_object('id', p.id, 'name', p.name) as "professional"
       FROM appointments a
       LEFT JOIN customers c ON a.customer_id = c.id
@@ -191,7 +191,7 @@ export class AppointmentRepositoryImpl implements AppointmentRepository {
              a.status, a.internal_notes as "internalNotes", a.price_charged as "priceCharged", 
              a.created_at as "createdAt",
              json_build_object('id', c.id, 'name', c.name, 'email', c.email) as "customer",
-             json_build_object('id', s.id, 'name', s.name, 'duration', s.duration_minutes) as "service",
+             json_build_object('id', s.id, 'name', s.name, 'price', s.price, 'duration', s.duration_minutes) as "service",
              json_build_object('id', p.id, 'name', p.name) as "professional"
       FROM appointments a
       LEFT JOIN customers c ON a.customer_id = c.id
@@ -211,7 +211,7 @@ export class AppointmentRepositoryImpl implements AppointmentRepository {
              a.status, a.internal_notes as "internalNotes", a.price_charged as "priceCharged", 
              a.created_at as "createdAt",
              json_build_object('id', c.id, 'name', c.name, 'email', c.email) as "customer",
-             json_build_object('id', s.id, 'name', s.name, 'duration', s.duration_minutes) as "service",
+             json_build_object('id', s.id, 'name', s.name, 'price', s.price, 'duration', s.duration_minutes) as "service",
              json_build_object('id', p.id, 'name', p.name) as "professional"
       FROM appointments a
       LEFT JOIN customers c ON a.customer_id = c.id
@@ -231,7 +231,7 @@ export class AppointmentRepositoryImpl implements AppointmentRepository {
              a.status, a.internal_notes as "internalNotes", a.price_charged as "priceCharged", 
              a.created_at as "createdAt",
              json_build_object('id', c.id, 'name', c.name, 'email', c.email) as "customer",
-             json_build_object('id', s.id, 'name', s.name, 'duration', s.duration_minutes) as "service",
+             json_build_object('id', s.id, 'name', s.name, 'price', s.price, 'duration', s.duration_minutes) as "service",
              json_build_object('id', p.id, 'name', p.name) as "professional"
       FROM appointments a
       LEFT JOIN customers c ON a.customer_id = c.id
