@@ -50,6 +50,8 @@ type PublicCustomer = {
 
 type Step = 'service' | 'professional' | 'datetime' | 'info' | 'success'
 
+const formatPrice = (value: number | string | null | undefined) => Number(value ?? 0).toFixed(2)
+
 export default function PublicBookingPage() {
   const params = useParams()
   const slug = params.slug as string
@@ -373,7 +375,7 @@ export default function PublicBookingPage() {
                       {service.duration} min
                     </div>
                     <span className="font-bold text-lg">
-                      R$ {service.price.toFixed(2)}
+                      R$ {formatPrice(service.price)}
                     </span>
                   </div>
                 </CardContent>
@@ -531,7 +533,7 @@ export default function PublicBookingPage() {
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Valor</span>
-                <span className="font-bold">R$ {selectedService?.price.toFixed(2)}</span>
+                <span className="font-bold">R$ {formatPrice(selectedService?.price)}</span>
               </div>
             </CardContent>
           </Card>

@@ -133,7 +133,7 @@ const getSalonData = async (req: Request, res: Response) => {
         id: service.id,
         tenantId: service.tenantId,
         name: service.name,
-        price: service.price,
+        price: Number(service.price ?? 0),
         duration: service.durationMinutes,
         isActive: service.isActive,
       })),
