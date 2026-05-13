@@ -64,7 +64,7 @@ const automationEngine = new AutomationEngine();
 const notificationService = new NotificationService();
 
 const parseBusinessHours = (range: string) => {
-  const [start, end] = range.split('-').map((part) => part.trim());
+  const [start, end] = range.split(/[-–—]/).map((part) => part.trim());
   if (!start || !end) return null;
   return { start, end };
 };
