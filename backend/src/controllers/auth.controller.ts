@@ -54,6 +54,7 @@ const buildTenantPayload = async (tenant: Tenant) => {
     trialEndsAt: tenant.trialEndsAt?.toISOString() ?? null,
     currentPlan: activeSubscription?.planId ?? null,
     stripeCustomerId: null,
+    businessHours: tenant.businessHours || {},
     createdAt: tenant.createdAt.toISOString(),
     updatedAt: tenant.createdAt.toISOString(),
   };
