@@ -45,6 +45,18 @@ const parseTime = (time: string) => {
   return { hours, minutes };
 };
 
+const getWeekdayKeys = (date: Date) => {
+  const keys: string[] = [];
+  const addKey = (locale: string, format: 'long' | 'short') =>
+    keys.push(date.toLocaleDateString(locale, { weekday: format }).toLowerCase());
+
+  addKey('en-US', 'long');
+  addKey('en-US', 'short');
+  addKey('pt-BR', 'long');
+  addKey('pt-BR', 'short');
+  return Array.from(new Set(keys));
+};
+
 const buildDateFromTime = (baseDate: Date, time: string) => {
   const parsed = parseTime(time);
   if (!parsed) return null;
@@ -73,11 +85,13 @@ const isOverlapping = (
 
 const getBusinessHoursForDate = async (tenantId: string, professionalId: string, date: Date) => {
   const professional = await professionalRepository.findByTenantAndId(tenantId, professionalId);
-  const dayKeyFull = getDateKey(date);
-  const dayKeyShort = date.toLocaleDateString('en-US', { weekday: 'short' }).toLowerCase();
+  const dayKeys = getWeekdayKeys(date);
 
   if (professional?.workingHours) {
-    const professionalHours = professional.workingHours[dayKeyFull] || professional.workingHours[dayKeyShort];
+    const professionalHours = dayKeys
+      .map((key) => professional.workingHours?.[key])
+      .find(Boolean);
+
     if (professionalHours) {
       return professionalHours.isWorking ? professionalHours : null;
     }
@@ -88,7 +102,7 @@ const getBusinessHoursForDate = async (tenantId: string, professionalId: string,
     return null;
   }
 
-  const range = tenant.businessHours[dayKeyFull] || tenant.businessHours[dayKeyShort];
+  const range = dayKeys.map((key) => tenant.businessHours[key]).find(Boolean);
   if (!range) {
     return null;
   }

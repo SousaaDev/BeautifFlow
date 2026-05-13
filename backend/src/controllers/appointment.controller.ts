@@ -69,13 +69,26 @@ const parseBusinessHours = (range: string) => {
   return { start, end };
 };
 
+const getWeekdayKeys = (date: Date) => {
+  const keys: string[] = [];
+  const addKey = (locale: string, format: 'long' | 'short') =>
+    keys.push(date.toLocaleDateString(locale, { weekday: format }).toLowerCase());
+
+  addKey('en-US', 'long');
+  addKey('en-US', 'short');
+  addKey('pt-BR', 'long');
+  addKey('pt-BR', 'short');
+  return Array.from(new Set(keys));
+};
+
 const getWorkingHoursForDate = async (tenantId: string, professionalId: string, date: Date) => {
   const professional = await profRepository.findByTenantAndId(tenantId, professionalId);
-  const dayKeyFull = date.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
-  const dayKeyShort = date.toLocaleDateString('en-US', { weekday: 'short' }).toLowerCase();
+  const dayKeys = getWeekdayKeys(date);
 
   if (professional?.workingHours) {
-    const professionalHours = professional.workingHours[dayKeyFull] || professional.workingHours[dayKeyShort];
+    const professionalHours = dayKeys
+      .map((key) => professional.workingHours?.[key])
+      .find(Boolean);
     if (professionalHours) {
       return professionalHours.isWorking ? professionalHours : null;
     }
@@ -86,7 +99,7 @@ const getWorkingHoursForDate = async (tenantId: string, professionalId: string, 
     return null;
   }
 
-  const businessHoursValue = tenant.businessHours[dayKeyFull];
+  const businessHoursValue = dayKeys.map((key) => tenant.businessHours[key]).find(Boolean);
   if (!businessHoursValue) {
     return null;
   }
