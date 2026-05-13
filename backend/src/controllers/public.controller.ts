@@ -46,7 +46,9 @@ const parseTime = (time: string) => {
 };
 
 const getWeekdayKeys = (date: Date) => {
+  const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
   const keys: string[] = [];
+
   const addKey = (locale: string, format: 'long' | 'short') =>
     keys.push(date.toLocaleDateString(locale, { weekday: format }).toLowerCase());
 
@@ -54,7 +56,9 @@ const getWeekdayKeys = (date: Date) => {
   addKey('en-US', 'short');
   addKey('pt-BR', 'long');
   addKey('pt-BR', 'short');
-  return Array.from(new Set(keys));
+  keys.push(dayNames[date.getDay()]);
+
+  return Array.from(new Set(keys.filter(Boolean)));
 };
 
 const buildDateFromTime = (baseDate: Date, time: string) => {
