@@ -29,7 +29,7 @@ const getDateKey = (date: Date) =>
   date.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
 
 const parseWorkingHours = (range: string) => {
-  const [start, end] = range.split('-').map((value) => value.trim());
+  const [start, end] = range.split(/[-–—]/).map((value) => value.trim());
   if (!start || !end) return null;
   return { start, end };
 };
@@ -211,12 +211,19 @@ const getAvailableSlots = async (req: Request, res: Response) => {
     }
 
     const appointments = await appointmentRepository.findByProfessional(tenant.id, professional.id);
-    const activeAppointments = appointments.filter((appointment) =>
-      appointment.status !== 'cancelled' && appointment.status !== 'no_show'
-    ).filter((appointment) => {
-      const appointmentDate = new Date(appointment.startTime);
-      return appointmentDate.toDateString() === selectedDate.toDateString();
-    });
+    const dayStart = new Date(selectedDate);
+    dayStart.setHours(0, 0, 0, 0);
+    const dayEnd = new Date(dayStart.getTime() + 24 * 60 * 60 * 1000);
+
+    const activeAppointments = appointments
+      .filter((appointment) => {
+        const status = String(appointment.status ?? '').toLowerCase();
+        return status !== 'cancelled' && status !== 'no_show';
+      })
+      .filter((appointment) => {
+        const appointmentDate = new Date(appointment.startTime);
+        return appointmentDate >= dayStart && appointmentDate < dayEnd;
+      });
 
     const now = new Date();
     const durationMs = service.durationMinutes * 60 * 1000;
