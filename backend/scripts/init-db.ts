@@ -67,10 +67,12 @@ const createTables = async () => {
         phone VARCHAR(20),
         commission_rate DECIMAL(5,2) DEFAULT 0.00,
         buffer_minutes INTEGER DEFAULT 10,
+        working_hours JSONB,
         is_active BOOLEAN DEFAULT true,
         created_at TIMESTAMP DEFAULT NOW()
       );
     `);
+    await pool.query(`ALTER TABLE professionals ADD COLUMN IF NOT EXISTS working_hours JSONB;`);
     await pool.query(`ALTER TABLE professionals ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT NOW();`);
 
     // Create services table

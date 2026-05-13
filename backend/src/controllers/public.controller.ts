@@ -82,6 +82,8 @@ const getWeekdayKeys = (date: Date) => {
   const addKey = (locale: string, format: 'long' | 'short') =>
     keys.push(date.toLocaleDateString(locale, { weekday: format }).toLowerCase());
 
+  const isoDate = date.toISOString().slice(0, 10);
+  keys.push(isoDate);
   addKey('en-US', 'long');
   addKey('en-US', 'short');
   addKey('pt-BR', 'long');

@@ -3,11 +3,23 @@ import { z } from 'zod';
 import { pool } from '../database/connection';
 import { ProfessionalRepositoryImpl } from '../models/ProfessionalRepositoryImpl';
 
+const workingHoursEntrySchema = z
+  .object({
+    isWorking: z.boolean(),
+    start: z.string().optional(),
+    end: z.string().optional(),
+  })
+  .refine((value) => !value.isWorking || (!!value.start && !!value.end), {
+    message: 'Start and end times are required when the professional is working',
+    path: ['start'],
+  });
+
 const createProfessionalSchema = z.object({
   name: z.string().min(1),
   phone: z.string().optional(),
   commissionRate: z.number().min(0).max(100).default(0),
   bufferMinutes: z.number().int().min(0).default(10),
+  workingHours: z.record(workingHoursEntrySchema).optional(),
 });
 
 const updateProfessionalSchema = createProfessionalSchema.partial();
