@@ -1,11 +1,13 @@
 import { AppointmentRepository } from '../models/AppointmentRepository';
 import { ProfessionalRepository } from '../models/ProfessionalRepository';
+import { TenantRepository } from '../models/TenantRepository';
 import { Appointment } from '../models/Appointment';
 
 export class CreateAppointment {
   constructor(
     private appointmentRepository: AppointmentRepository,
-    private professionalRepository: ProfessionalRepository
+    private professionalRepository: ProfessionalRepository,
+    private tenantRepository: TenantRepository
   ) {}
 
   async execute(data: {
@@ -22,7 +24,7 @@ export class CreateAppointment {
       throw new Error('startTime must be before endTime');
     }
 
-    // Validação 2: Buscar profissional
+    // Validação 2: Buscar profissional e tenant
     const professional = await this.professionalRepository.findByTenantAndId(
       data.tenantId,
       data.professionalId
@@ -31,8 +33,13 @@ export class CreateAppointment {
       throw new Error('Professional not found');
     }
 
-    // Validação 3: Verificar conflito com buffer time
-    const bufferMs = professional.bufferMinutes * 60 * 1000;
+    const tenant = await this.tenantRepository.findById(data.tenantId);
+    if (!tenant) {
+      throw new Error('Tenant not found');
+    }
+
+    // Validação 3: Verificar conflito com buffer time (use tenant's buffer configuration)
+    const bufferMs = tenant.bufferMinutes * 60 * 1000;
     const adjustedStart = new Date(data.startTime.getTime() - bufferMs);
     const adjustedEnd = new Date(data.endTime.getTime() + bufferMs);
 

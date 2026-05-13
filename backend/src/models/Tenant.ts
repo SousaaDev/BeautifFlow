@@ -4,6 +4,7 @@ export interface Tenant {
   name: string;
   trialEndsAt?: Date;
   businessHours: Record<string, string>;
+  bufferMinutes: number;
   settings?: Record<string, any>;
   createdAt: Date;
 }

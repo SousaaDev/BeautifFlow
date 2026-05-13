@@ -9,6 +9,7 @@ const createTenantSchema = z.object({
   name: z.string(),
   slug: z.string(),
   businessHours: z.record(z.string()),
+  bufferMinutes: z.number().int().min(0).optional().default(10),
 });
 
 const tenantRepository = new TenantRepositoryImpl(pool);
@@ -45,6 +46,7 @@ const updateTenantSchema = z.object({
   name: z.string().optional(),
   slug: z.string().optional(),
   businessHours: z.record(z.string()).optional(),
+  bufferMinutes: z.number().int().min(0).optional(),
   trialEndsAt: z.string().optional(),
 });
 

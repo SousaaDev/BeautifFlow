@@ -25,6 +25,12 @@ const createTables = async () => {
       ADD COLUMN IF NOT EXISTS settings JSONB DEFAULT '{}';
     `);
 
+    // Add buffer_minutes column for default pause between appointments
+    await pool.query(`
+      ALTER TABLE beauty_shops
+      ADD COLUMN IF NOT EXISTS buffer_minutes INTEGER DEFAULT 10;
+    `);
+
     // Create users table
     await pool.query(`
       CREATE TABLE IF NOT EXISTS users (

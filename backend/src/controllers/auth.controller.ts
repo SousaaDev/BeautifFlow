@@ -79,6 +79,7 @@ export const register = async (req: Request, res: Response) => {
       name: data.salonName,
       trialEndsAt,
       businessHours: {},
+      bufferMinutes: 10,
     });
 
     const hashedPassword = await bcrypt.hash(data.password, 10);

@@ -42,6 +42,7 @@ export default function SettingsPage() {
     saturday: '',
     sunday: '',
   })
+  const [bufferMinutes, setBufferMinutes] = useState(10)
   const [isLoading, setIsLoading] = useState(false)
 
   // Notification preferences
@@ -77,6 +78,7 @@ export default function SettingsPage() {
 
     setCompanyName(tenant.name)
     setCompanySlug(tenant.slug)
+    setBufferMinutes(tenant.bufferMinutes || 10)
 
     setBusinessHours({
       monday: tenant.businessHours?.monday ?? '',
@@ -146,6 +148,10 @@ export default function SettingsPage() {
 
       if (JSON.stringify(normalizedCurrentHours) !== JSON.stringify(businessHours)) {
         tenantPayload.businessHours = businessHours
+      }
+
+      if (bufferMinutes !== tenant.bufferMinutes) {
+        tenantPayload.bufferMinutes = bufferMinutes
       }
 
       if (Object.keys(tenantPayload).length > 0) {
@@ -413,6 +419,20 @@ export default function SettingsPage() {
                     placeholder="Fechado"
                   />
                 </div>
+              </div>
+
+              <div className="grid gap-2 pt-4 border-t">
+                <Label htmlFor="buffer-minutes" className="text-xs text-muted-foreground">⏱️ Pausa entre atendimentos (minutos)</Label>
+                <p className="text-xs text-muted-foreground">Tempo de pausa entre atendimentos para preparação. Ex: cliente agendou 12:00-12:30, com buffer de 10 min, próximo slot disponível é 12:40.</p>
+                <Input
+                  id="buffer-minutes"
+                  type="number"
+                  min="0"
+                  step="5"
+                  value={bufferMinutes}
+                  onChange={(e) => setBufferMinutes(Math.max(0, parseInt(e.target.value) || 0))}
+                  className="text-sm"
+                />
               </div>
             </div>
 

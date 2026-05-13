@@ -275,19 +275,23 @@ const getAvailableSlots = async (req: Request, res: Response) => {
 
     const now = new Date();
     const durationMs = service.durationMinutes * 60 * 1000;
-    const bufferMs = professional.bufferMinutes * 60 * 1000;
+    // Use tenant's buffer_minutes (configured by owner), not professional's
+    const bufferMs = tenant.bufferMinutes * 60 * 1000;
 
     const availableSlots: string[] = [];
     let slotCount = 0;
-    for (let current = new Date(workStart); current.getTime() + durationMs <= workEnd.getTime(); current = addMinutes(current, 30)) {
+    // Permite slots que COMEÇAM até workEnd (mesmo que terminem depois)
+    for (let current = new Date(workStart); current.getTime() <= workEnd.getTime(); current = addMinutes(current, 30)) {
       const slotStart = new Date(current);
       const slotEnd = new Date(slotStart.getTime() + durationMs);
 
-      // Garantir que o slot está dentro do horário de funcionamento
-      if (slotStart.getTime() < workStart.getTime() || slotEnd.getTime() > workEnd.getTime()) {
+      // Validar que o slot começa dentro do horário de funcionamento
+      // Slot pode terminar APÓS o fechamento, desde que comece antes
+      if (slotStart.getTime() < workStart.getTime() || slotStart.getTime() > workEnd.getTime()) {
         continue;
       }
 
+      // Remove slots que já passaram
       if (selectedDate.toDateString() === now.toDateString() && slotStart < now) {
         continue;
       }
@@ -369,6 +373,7 @@ const createPublicAppointment = async (req: Request, res: Response) => {
     const startTime = new Date(data.startTime);
     const endTime = new Date(startTime.getTime() + service.durationMinutes * 60 * 1000);
 
+    // Use tenant's buffer_minutes (configured by owner)
     const validation = await validateAppointmentConflicts(
       tenant.id,
       professional.id,
@@ -376,7 +381,7 @@ const createPublicAppointment = async (req: Request, res: Response) => {
       startTime,
       endTime,
       service.durationMinutes,
-      professional.bufferMinutes
+      tenant.bufferMinutes
     );
 
     if (!validation.isValid) {
