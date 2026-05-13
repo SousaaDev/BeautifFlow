@@ -70,6 +70,22 @@ const getNormalizedScheduleValue = <T>(schedule: Record<string, T> | undefined, 
   return keys.reduce<T | undefined>((found, key) => found ?? normalizedSchedule[key.trim().toLowerCase()], undefined as T | undefined);
 };
 
+/** YYYY-MM-DD no fuso local (alinha com query ?date= do agendamento público) */
+const formatLocalYmd = (date: Date) =>
+  `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+
+const CALENDAR_DAY_KEY = /^\d{4}-\d{2}-\d{2}$/;
+
+const WEEKDAY_KEYS = [
+  'monday',
+  'tuesday',
+  'wednesday',
+  'thursday',
+  'friday',
+  'saturday',
+  'sunday',
+] as const;
+
 const getWeekdayKeys = (date: Date) => {
   const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
   const dayNamesShort = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
@@ -82,8 +98,7 @@ const getWeekdayKeys = (date: Date) => {
   const addKey = (locale: string, format: 'long' | 'short') =>
     keys.push(date.toLocaleDateString(locale, { weekday: format }).toLowerCase());
 
-  const isoDate = date.toISOString().slice(0, 10);
-  keys.push(isoDate);
+  keys.push(formatLocalYmd(date));
   addKey('en-US', 'long');
   addKey('en-US', 'short');
   addKey('pt-BR', 'long');
@@ -129,6 +144,17 @@ const isOverlapping = (
 const isWorkingHoursEntry = (value: unknown): value is { isWorking?: boolean; start?: string; end?: string } =>
   typeof value === 'object' && value !== null && 'isWorking' in value;
 
+/** Profissional criado com salão sem horário: os 7 dias ficam isWorking=false vazio — deve herdar o tenant depois que o dono configura /settings */
+const isBlankWeeklySchedule = (normPro: Record<string, unknown>): boolean => {
+  const weekPresent = WEEKDAY_KEYS.filter((k) => normPro[k] !== undefined);
+  if (weekPresent.length !== WEEKDAY_KEYS.length) return false;
+  return WEEKDAY_KEYS.every((k) => {
+    const v = normPro[k];
+    if (!isWorkingHoursEntry(v)) return false;
+    return v.isWorking === false && !String(v.start ?? '').trim() && !String(v.end ?? '').trim();
+  });
+};
+
 const getBusinessHoursForDate = async (tenantId: string, professionalId: string, date: Date) => {
   const dayKeys = getWeekdayKeys(date);
 
@@ -140,20 +166,48 @@ const getBusinessHoursForDate = async (tenantId: string, professionalId: string,
   let businessHoursValue: unknown = getNormalizedScheduleValue(tenant.businessHours, dayKeys);
 
   const professional = await professionalRepository.findByTenantAndId(tenantId, professionalId);
-  if (professional?.workingHours && Object.keys(professional.workingHours).length > 0) {
-    const professionalHours = getNormalizedScheduleValue(professional.workingHours, dayKeys);
-    if (professionalHours !== undefined && professionalHours !== null) {
-      if (isWorkingHoursEntry(professionalHours)) {
-        if (professionalHours.isWorking === false) {
-          return null;
-        }
-        const parsedProfessional = parseWorkingHours(professionalHours);
-        if (parsedProfessional) {
-          businessHoursValue = professionalHours;
-        }
-      } else if (parseWorkingHours(professionalHours)) {
+  if (!professional?.workingHours || typeof professional.workingHours !== 'object') {
+    if (!businessHoursValue) return null;
+    return parseWorkingHours(businessHoursValue);
+  }
+
+  const proWh = professional.workingHours as Record<string, unknown>;
+  if (Object.keys(proWh).length === 0) {
+    if (!businessHoursValue) return null;
+    return parseWorkingHours(businessHoursValue);
+  }
+
+  const normPro = Object.fromEntries(
+    Object.entries(proWh).map(([k, v]) => [k.trim().toLowerCase(), v])
+  );
+
+  const localYmd = formatLocalYmd(date);
+  if (CALENDAR_DAY_KEY.test(localYmd) && normPro[localYmd] !== undefined) {
+    const ex = normPro[localYmd];
+    if (isWorkingHoursEntry(ex) && ex.isWorking === false) {
+      return null;
+    }
+    const parsedEx = parseWorkingHours(ex);
+    if (parsedEx) return parsedEx;
+  }
+
+  if (isBlankWeeklySchedule(normPro)) {
+    if (!businessHoursValue) return null;
+    return parseWorkingHours(businessHoursValue);
+  }
+
+  const professionalHours = getNormalizedScheduleValue(proWh, dayKeys);
+  if (professionalHours !== undefined && professionalHours !== null) {
+    if (isWorkingHoursEntry(professionalHours)) {
+      if (professionalHours.isWorking === false) {
+        return null;
+      }
+      const parsedProfessional = parseWorkingHours(professionalHours);
+      if (parsedProfessional) {
         businessHoursValue = professionalHours;
       }
+    } else if (parseWorkingHours(professionalHours)) {
+      businessHoursValue = professionalHours;
     }
   }
 
@@ -288,9 +342,9 @@ const getAvailableSlots = async (req: Request, res: Response) => {
       });
 
     const now = new Date();
-    const durationMs = service.durationMinutes * 60 * 1000;
+    const durationMs = Math.max(0, Number(service.durationMinutes ?? 0)) * 60 * 1000;
     // Use tenant's buffer_minutes (configured by owner), not professional's
-    const bufferMs = tenant.bufferMinutes * 60 * 1000;
+    const bufferMs = Math.max(0, Number(tenant.bufferMinutes ?? 10)) * 60 * 1000;
 
     const availableSlots: string[] = [];
     let slotCount = 0;
