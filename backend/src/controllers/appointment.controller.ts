@@ -14,7 +14,6 @@ import { AutomationEngine } from '../services/AutomationEngine';
 import { NotificationService } from '../services/NotificationService';
 import { redisClient } from '../infrastructure/redis';
 import {
-  coerceBusinessHoursRecord,
   getNormalizedScheduleValue,
   getWeekdayKeys,
   parseWorkingHoursRange,
@@ -77,8 +76,7 @@ const getWorkingHoursForDate = async (tenantId: string, _professionalId: string,
     return null;
   }
 
-  const hours = coerceBusinessHoursRecord(tenant.businessHours) ?? {};
-  const businessHoursValue = getNormalizedScheduleValue(hours, dayKeys);
+  const businessHoursValue = getNormalizedScheduleValue(tenant.businessHours, dayKeys);
 
   if (!businessHoursValue) {
     return null;

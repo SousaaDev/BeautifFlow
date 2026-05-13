@@ -10,7 +10,6 @@ import { AppointmentRepositoryImpl } from '../models/AppointmentRepositoryImpl';
 import { CustomerRepositoryImpl } from '../models/CustomerRepositoryImpl';
 import { validateAppointmentConflicts } from './appointment.controller';
 import {
-  coerceBusinessHoursRecord,
   getNormalizedScheduleValue,
   getWeekdayKeys,
   parseWorkingHoursRange,
@@ -75,8 +74,7 @@ const getTenantBusinessHoursForDate = async (tenantId: string, date: Date) => {
   if (!tenant) {
     return null;
   }
-  const hours = coerceBusinessHoursRecord(tenant.businessHours) ?? {};
-  const businessHoursValue = getNormalizedScheduleValue(hours, dayKeys);
+  const businessHoursValue = getNormalizedScheduleValue(tenant.businessHours, dayKeys);
   if (!businessHoursValue) {
     return null;
   }

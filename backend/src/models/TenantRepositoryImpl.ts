@@ -1,7 +1,7 @@
 import { Pool } from 'pg';
 import { Tenant } from './Tenant';
 import { TenantRepository } from './TenantRepository';
-import { coerceBusinessHoursRecord, coerceSettingsRecord } from '../utils/businessHoursSchedule';
+import { coerceSettingsRecord, normalizeStoredBusinessHours } from '../utils/businessHoursSchedule';
 
 export class TenantRepositoryImpl implements TenantRepository {
   constructor(private pool: Pool) {}
@@ -12,7 +12,14 @@ export class TenantRepositoryImpl implements TenantRepository {
       VALUES ($1, $2, $3, $4, $5, $6)
       RETURNING id, slug, name, trial_ends_at, business_hours, buffer_minutes, settings, created_at
     `;
-    const values = [tenant.slug, tenant.name, tenant.trialEndsAt, JSON.stringify(tenant.businessHours), tenant.bufferMinutes || 10, JSON.stringify(tenant.settings || {})];
+    const values = [
+      tenant.slug,
+      tenant.name,
+      tenant.trialEndsAt,
+      tenant.businessHours ?? {},
+      tenant.bufferMinutes || 10,
+      tenant.settings || {},
+    ];
     const result = await this.pool.query(query, values);
     return this.mapRowToTenant(result.rows[0]);
   }
@@ -45,7 +52,7 @@ export class TenantRepositoryImpl implements TenantRepository {
       if (tenant[key] !== undefined) {
         fields.push(`${this.toColumnName(key)} = $${values.length + 1}`);
         values.push(
-          key === 'businessHours' || key === 'settings' ? JSON.stringify(tenant[key]) : tenant[key]
+          key === 'businessHours' || key === 'settings' ? (tenant[key] as object) ?? {} : tenant[key]
         );
       }
     }
@@ -95,7 +102,7 @@ export class TenantRepositoryImpl implements TenantRepository {
       slug: row.slug,
       name: row.name,
       trialEndsAt: row.trial_ends_at,
-      businessHours: coerceBusinessHoursRecord(row.business_hours) ?? {},
+      businessHours: normalizeStoredBusinessHours(row.business_hours),
       bufferMinutes: row.buffer_minutes || 10,
       settings: coerceSettingsRecord(row.settings),
       createdAt: row.created_at,
