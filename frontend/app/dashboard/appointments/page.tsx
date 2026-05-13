@@ -440,6 +440,7 @@ export default function AppointmentsPage() {
 
                     <div className="space-y-1">
                       {dayAppointments
+                        .filter((apt) => parseISO(apt.startTime) >= new Date())
                         .sort((a, b) => a.startTime.localeCompare(b.startTime))
                         .map((apt) => (
                           <div
@@ -496,6 +497,7 @@ export default function AppointmentsPage() {
           ) : (
             <div className="space-y-3">
               {getAppointmentsForDay(new Date())
+                .filter((apt) => parseISO(apt.startTime) >= new Date())
                 .sort((a, b) => a.startTime.localeCompare(b.startTime))
                 .map((apt) => (
                   <div
