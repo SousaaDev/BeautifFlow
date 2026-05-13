@@ -94,6 +94,9 @@ const getNormalizedScheduleValue = <T>(schedule: Record<string, T> | undefined, 
   return keys.reduce<T | undefined>((found, key) => found ?? normalizedSchedule[key.trim().toLowerCase()], undefined as T | undefined);
 };
 
+const formatLocalYmd = (date: Date) =>
+  `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+
 const getWeekdayKeys = (date: Date) => {
   const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
   const dayNamesShort = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
@@ -106,8 +109,7 @@ const getWeekdayKeys = (date: Date) => {
   const addKey = (locale: string, format: 'long' | 'short') =>
     keys.push(date.toLocaleDateString(locale, { weekday: format }).toLowerCase());
 
-  const isoDate = date.toISOString().slice(0, 10);
-  keys.push(isoDate);
+  keys.push(formatLocalYmd(date));
   addKey('en-US', 'long');
   addKey('en-US', 'short');
   addKey('pt-BR', 'long');
@@ -123,26 +125,15 @@ const getWeekdayKeys = (date: Date) => {
   return Array.from(new Set(keys.filter(Boolean)));
 };
 
-const getWorkingHoursForDate = async (tenantId: string, professionalId: string, date: Date) => {
+const getWorkingHoursForDate = async (tenantId: string, _professionalId: string, date: Date) => {
   const dayKeys = getWeekdayKeys(date);
 
-  // First, get tenant's business hours (default)
   const tenant = await tenantRepository.findById(tenantId);
   if (!tenant) {
     return null;
   }
 
-  let businessHoursValue: any = getNormalizedScheduleValue(tenant.businessHours, dayKeys);
-  
-  // If professional has specific working hours configured, use as exception
-  const professional = await profRepository.findByTenantAndId(tenantId, professionalId);
-  if (professional?.workingHours && Object.keys(professional.workingHours).length > 0) {
-    const professionalHours = getNormalizedScheduleValue(professional.workingHours, dayKeys);
-    if (professionalHours) {
-      // Professional has specific configuration for this day
-      businessHoursValue = professionalHours;
-    }
-  }
+  const businessHoursValue = getNormalizedScheduleValue(tenant.businessHours, dayKeys);
 
   if (!businessHoursValue) {
     return null;
@@ -184,18 +175,8 @@ export const validateAppointmentConflicts = async (
     errors.push(`Appointment duration (${appointmentDuration}min) doesn't match service duration (${serviceDuration}min)`);
   }
 
-  // 3. Check working hours (professional and salon)
+  // 3. Check working hours (somente horário global do salão)
   const workingHours = await getWorkingHoursForDate(tenantId, professionalId, startTime);
-  const professional = await profRepository.findByTenantAndId(tenantId, professionalId);
-
-  if (professional?.workingHours) {
-    const dayKeys = getWeekdayKeys(startTime);
-    const professionalHours = getNormalizedScheduleValue(professional.workingHours, dayKeys);
-
-    if (professionalHours && !professionalHours.isWorking) {
-      errors.push(`Professional is not working on ${dayKeys[0]}`);
-    }
-  }
 
   if (workingHours) {
     const workStart = new Date(startTime);

@@ -346,7 +346,7 @@ export default function SettingsPage() {
                 Use o formato <span className="font-medium">08:00-18:00</span> ou deixe vazio para indicar fechamento.
               </p>
               <p className="text-sm text-muted-foreground pl-6">
-                Este horário será usado como padrão do salão. Cada profissional pode ter sua própria agenda e exceções no cadastro de profissionais.
+                Este horário vale para o salão inteiro e para todos os profissionais na página pública de agendamento.
               </p>
               <div className="grid gap-3 pl-6 md:grid-cols-2 xl:grid-cols-3">
                 <div className="grid gap-2">
