@@ -2,7 +2,7 @@ import api from './client'
 import type { Tenant } from '../types'
 
 export const tenantApi = {
-  update: (tenantId: string, data: Partial<Pick<Tenant, 'name' | 'slug' | 'businessHours'>>) =>
+  update: (tenantId: string, data: Partial<Pick<Tenant, 'name' | 'slug' | 'businessHours' | 'bufferMinutes'>>) =>
     api.put<Tenant>(`/api/tenants/${tenantId}`, data),
 }
 

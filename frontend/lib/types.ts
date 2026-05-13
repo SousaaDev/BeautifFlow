@@ -11,6 +11,7 @@ export interface Tenant {
   currentPlan: string | null
   stripeCustomerId: string | null
   businessHours?: Record<string, string>
+  bufferMinutes?: number
   createdAt: string
   updatedAt: string
 }

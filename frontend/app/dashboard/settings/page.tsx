@@ -127,7 +127,7 @@ export default function SettingsPage() {
       }
 
       // Update tenant
-      const tenantPayload: Partial<Pick<typeof tenant, 'name' | 'slug' | 'businessHours'>> = {}
+      const tenantPayload: any = {}
       if (companyName !== tenant.name) {
         tenantPayload.name = companyName
       }
