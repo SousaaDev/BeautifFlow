@@ -71,6 +71,9 @@ const parseBusinessHours = (range: string) => {
 
 const getWeekdayKeys = (date: Date) => {
   const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+  const dayNamesShort = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
+  const ptDayNames = ['domingo', 'segunda-feira', 'terça-feira', 'quarta-feira', 'quinta-feira', 'sexta-feira', 'sábado'];
+  const ptDayNamesShort = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb'];
   const keys: string[] = [];
 
   const addKey = (locale: string, format: 'long' | 'short') =>
@@ -81,6 +84,9 @@ const getWeekdayKeys = (date: Date) => {
   addKey('pt-BR', 'long');
   addKey('pt-BR', 'short');
   keys.push(dayNames[date.getDay()]);
+  keys.push(dayNamesShort[date.getDay()]);
+  keys.push(ptDayNames[date.getDay()]);
+  keys.push(ptDayNamesShort[date.getDay()]);
 
   return Array.from(new Set(keys.filter(Boolean)));
 };
