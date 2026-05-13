@@ -23,6 +23,16 @@ import { useToast } from '@/hooks/use-toast'
 import { authApi } from '@/lib/api/auth'
 import { tenantApi } from '@/lib/api/tenants'
 import { settingsApi, NotificationSettings } from '@/lib/api/settingsApi'
+import {
+  WEEKDAY_KEYS,
+  WEEKDAY_LABELS_PT,
+  type WeekdayKey,
+  type DayScheduleUi,
+  defaultWeeklySchedule,
+  scheduleFromTenant,
+  uiScheduleToBusinessHours,
+  validateWeeklySchedule,
+} from '@/lib/weeklyBusinessHours'
 
 export default function SettingsPage() {
   const { tenant, user, refreshUser } = useAuth()
@@ -33,15 +43,9 @@ export default function SettingsPage() {
   const [userEmail, setUserEmail] = useState(user?.email || '')
   const [companyName, setCompanyName] = useState(tenant?.name || '')
   const [companySlug, setCompanySlug] = useState(tenant?.slug || '')
-  const [businessHours, setBusinessHours] = useState<Record<string, string>>({
-    monday: '',
-    tuesday: '',
-    wednesday: '',
-    thursday: '',
-    friday: '',
-    saturday: '',
-    sunday: '',
-  })
+  const [weeklySchedule, setWeeklySchedule] = useState<Record<WeekdayKey, DayScheduleUi>>(() =>
+    defaultWeeklySchedule()
+  )
   const [bufferMinutes, setBufferMinutes] = useState(10)
   const [isLoading, setIsLoading] = useState(false)
 
@@ -80,15 +84,7 @@ export default function SettingsPage() {
     setCompanySlug(tenant.slug)
     setBufferMinutes(tenant.bufferMinutes || 10)
 
-    setBusinessHours({
-      monday: tenant.businessHours?.monday ?? '',
-      tuesday: tenant.businessHours?.tuesday ?? '',
-      wednesday: tenant.businessHours?.wednesday ?? '',
-      thursday: tenant.businessHours?.thursday ?? '',
-      friday: tenant.businessHours?.friday ?? '',
-      saturday: tenant.businessHours?.saturday ?? '',
-      sunday: tenant.businessHours?.sunday ?? '',
-    })
+    setWeeklySchedule(scheduleFromTenant(tenant.businessHours))
   }, [tenant])
 
   const hasActiveSubscription = tenant?.status === 'ACTIVE'
@@ -107,14 +103,27 @@ export default function SettingsPage() {
     : 'Ir para faturamento'
 
   const handleSaveProfile = async () => {
-    if (!user?.id || !tenant?.id) {
+    const tenantId = tenant?.id ?? user?.tenantId
+    if (!user?.id || !tenantId || !tenant) {
       toast({
         title: 'Erro',
-        description: 'Dados de usuário ou tenant não disponíveis',
+        description: 'Dados de usuário ou salão não disponíveis',
         variant: 'destructive',
       })
       return
     }
+
+    const scheduleError = validateWeeklySchedule(weeklySchedule)
+    if (scheduleError) {
+      toast({
+        title: 'Horários',
+        description: scheduleError,
+        variant: 'destructive',
+      })
+      return
+    }
+
+    const businessHoursPayload = uiScheduleToBusinessHours(weeklySchedule)
 
     setIsLoading(true)
     try {
@@ -126,14 +135,14 @@ export default function SettingsPage() {
         })
       }
 
-      // Update tenant — sempre enviar horários comerciais e buffer (evita não persistir por comparação JSON / estado desatualizado)
+      // Update tenant — horários em formato HH:mm-HH:mm (gerado pelos campos de hora)
       const tenantPayload: {
         name?: string
         slug?: string
         businessHours: Record<string, string>
         bufferMinutes: number
       } = {
-        businessHours,
+        businessHours: businessHoursPayload,
         bufferMinutes,
       }
       if (companyName !== tenant.name) {
@@ -143,7 +152,7 @@ export default function SettingsPage() {
         tenantPayload.slug = companySlug
       }
 
-      await tenantApi.update(tenant.id, tenantPayload)
+      await tenantApi.update(tenantId, tenantPayload)
 
       // Save notification preferences
       await settingsApi.updateNotificationSettings(notificationsEnabled)
@@ -329,83 +338,74 @@ export default function SettingsPage() {
                 <h4 className="text-sm font-medium">Horários comerciais</h4>
               </div>
               <p className="text-sm text-muted-foreground pl-6">
-                Configure o horário de funcionamento do salão para cada dia da semana.
-                Use o formato <span className="font-medium">08:00-18:00</span> ou deixe vazio para indicar fechamento.
+                Defina abertura e fechamento com os seletores de hora. Marque <span className="font-medium">Fechado</span> nos dias sem atendimento.
               </p>
               <p className="text-sm text-muted-foreground pl-6">
                 Este horário vale para o salão inteiro e para todos os profissionais na página pública de agendamento.
               </p>
-              <div className="grid gap-3 pl-6 md:grid-cols-2 xl:grid-cols-3">
-                <div className="grid gap-2">
-                  <Label htmlFor="business-hours-monday" className="text-xs text-muted-foreground">Segunda</Label>
-                  <Input
-                    id="business-hours-monday"
-                    value={businessHours.monday}
-                    onChange={(e) => setBusinessHours(prev => ({ ...prev, monday: e.target.value }))}
-                    className="text-sm"
-                    placeholder="08:00-18:00"
-                  />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="business-hours-tuesday" className="text-xs text-muted-foreground">Terça</Label>
-                  <Input
-                    id="business-hours-tuesday"
-                    value={businessHours.tuesday}
-                    onChange={(e) => setBusinessHours(prev => ({ ...prev, tuesday: e.target.value }))}
-                    className="text-sm"
-                    placeholder="08:00-18:00"
-                  />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="business-hours-wednesday" className="text-xs text-muted-foreground">Quarta</Label>
-                  <Input
-                    id="business-hours-wednesday"
-                    value={businessHours.wednesday}
-                    onChange={(e) => setBusinessHours(prev => ({ ...prev, wednesday: e.target.value }))}
-                    className="text-sm"
-                    placeholder="08:00-18:00"
-                  />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="business-hours-thursday" className="text-xs text-muted-foreground">Quinta</Label>
-                  <Input
-                    id="business-hours-thursday"
-                    value={businessHours.thursday}
-                    onChange={(e) => setBusinessHours(prev => ({ ...prev, thursday: e.target.value }))}
-                    className="text-sm"
-                    placeholder="08:00-18:00"
-                  />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="business-hours-friday" className="text-xs text-muted-foreground">Sexta</Label>
-                  <Input
-                    id="business-hours-friday"
-                    value={businessHours.friday}
-                    onChange={(e) => setBusinessHours(prev => ({ ...prev, friday: e.target.value }))}
-                    className="text-sm"
-                    placeholder="08:00-18:00"
-                  />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="business-hours-saturday" className="text-xs text-muted-foreground">Sábado</Label>
-                  <Input
-                    id="business-hours-saturday"
-                    value={businessHours.saturday}
-                    onChange={(e) => setBusinessHours(prev => ({ ...prev, saturday: e.target.value }))}
-                    className="text-sm"
-                    placeholder="08:00-18:00"
-                  />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="business-hours-sunday" className="text-xs text-muted-foreground">Domingo</Label>
-                  <Input
-                    id="business-hours-sunday"
-                    value={businessHours.sunday}
-                    onChange={(e) => setBusinessHours(prev => ({ ...prev, sunday: e.target.value }))}
-                    className="text-sm"
-                    placeholder="Fechado"
-                  />
-                </div>
+              <div className="space-y-3 pl-6">
+                {WEEKDAY_KEYS.map((day) => {
+                  const row = weeklySchedule[day]
+                  return (
+                    <div
+                      key={day}
+                      className="flex flex-col gap-3 rounded-lg border border-slate-200 bg-slate-50/80 p-3 sm:flex-row sm:items-center sm:justify-between"
+                    >
+                      <div className="min-w-[10rem] text-sm font-medium text-foreground">
+                        {WEEKDAY_LABELS_PT[day]}
+                      </div>
+                      <div className="flex flex-1 flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
+                        <div className="flex items-center gap-2">
+                          <Switch
+                            id={`closed-${day}`}
+                            checked={row.closed}
+                            onCheckedChange={(checked) =>
+                              setWeeklySchedule((prev) => ({
+                                ...prev,
+                                [day]: { ...prev[day], closed: checked },
+                              }))
+                            }
+                          />
+                          <Label htmlFor={`closed-${day}`} className="text-sm text-muted-foreground cursor-pointer">
+                            Fechado
+                          </Label>
+                        </div>
+                        {!row.closed && (
+                          <div className="flex flex-wrap items-center gap-2">
+                            <div className="flex items-center gap-2">
+                              <Label className="text-xs text-muted-foreground whitespace-nowrap">Abre</Label>
+                              <Input
+                                type="time"
+                                value={row.open}
+                                onChange={(e) =>
+                                  setWeeklySchedule((prev) => ({
+                                    ...prev,
+                                    [day]: { ...prev[day], open: e.target.value },
+                                  }))
+                                }
+                                className="w-[7.5rem] text-sm bg-white"
+                              />
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Label className="text-xs text-muted-foreground whitespace-nowrap">Fecha</Label>
+                              <Input
+                                type="time"
+                                value={row.close}
+                                onChange={(e) =>
+                                  setWeeklySchedule((prev) => ({
+                                    ...prev,
+                                    [day]: { ...prev[day], close: e.target.value },
+                                  }))
+                                }
+                                className="w-[7.5rem] text-sm bg-white"
+                              />
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )
+                })}
               </div>
 
               <div className="grid gap-2 pt-4 border-t">

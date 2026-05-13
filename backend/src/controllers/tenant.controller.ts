@@ -2,15 +2,24 @@ import { Request, Response } from 'express';
 import { z } from 'zod';
 import { pool } from '../database/connection';
 import { TenantRepositoryImpl } from '../models/TenantRepositoryImpl';
+import { Tenant } from '../models/Tenant';
 import { CreateTenant } from '../services/CreateTenant';
+import { normalizeBusinessHoursPayload } from '../utils/businessHoursSchedule';
 
 // Placeholder schemas
-const createTenantSchema = z.object({
-  name: z.string(),
-  slug: z.string(),
-  businessHours: z.record(z.string()),
-  bufferMinutes: z.number().int().min(0).optional().default(10),
-});
+const createTenantSchema = z
+  .object({
+    name: z.string(),
+    slug: z.string(),
+    businessHours: z.unknown().optional(),
+    bufferMinutes: z.number().int().min(0).optional().default(10),
+  })
+  .transform((data) => ({
+    name: data.name,
+    slug: data.slug,
+    businessHours: normalizeBusinessHoursPayload(data.businessHours ?? {}),
+    bufferMinutes: data.bufferMinutes,
+  }));
 
 const tenantRepository = new TenantRepositoryImpl(pool);
 const createTenantUseCase = new CreateTenant(tenantRepository);
@@ -45,7 +54,7 @@ export const show = async (req: Request, res: Response) => {
 const updateTenantSchema = z.object({
   name: z.string().optional(),
   slug: z.string().optional(),
-  businessHours: z.record(z.string()).optional(),
+  businessHours: z.unknown().optional(),
   bufferMinutes: z.number().int().min(0).optional(),
   trialEndsAt: z.string().optional(),
 });
@@ -54,17 +63,26 @@ export const update = async (req: Request, res: Response) => {
   const { id } = req.params;
   const auth = req as any;
 
-  // Verify the user can only update their own tenant
-  if (auth.user?.tenantId !== id) {
+  // Verify the user can only update their own tenant (UUID vs string seguro)
+  if (String(auth.user?.tenantId) !== String(id)) {
     return res.status(403).json({ error: 'Forbidden: Cannot update this tenant' });
   }
 
   try {
     const data = updateTenantSchema.parse(req.body);
-    const updateData = {
-      ...data,
-      trialEndsAt: data.trialEndsAt ? new Date(data.trialEndsAt) : undefined,
-    };
+    const updateData: Partial<Tenant> = {};
+    if (data.name !== undefined) updateData.name = data.name;
+    if (data.slug !== undefined) updateData.slug = data.slug;
+    if (data.businessHours !== undefined) {
+      updateData.businessHours = normalizeBusinessHoursPayload(data.businessHours);
+    }
+    if (data.bufferMinutes !== undefined) {
+      updateData.bufferMinutes = data.bufferMinutes;
+    }
+    if (data.trialEndsAt) {
+      updateData.trialEndsAt = new Date(data.trialEndsAt);
+    }
+
     const tenant = await tenantRepository.update(id, updateData);
     res.json({ message: 'Tenant updated', tenant });
   } catch (error) {
