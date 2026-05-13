@@ -195,8 +195,8 @@ export const validateAppointmentConflicts = async (
     workStart.setHours(startHour, startMin, 0, 0);
     workEnd.setHours(endHour, endMin, 0, 0);
 
-    if (startTime < workStart || endTime > workEnd) {
-      errors.push(`Appointment time (${startTime.toLocaleTimeString()} - ${endTime.toLocaleTimeString()}) is outside working hours (${workingHours.start} - ${workingHours.end})`);
+    if (startTime < workStart || startTime >= workEnd) {
+      errors.push(`Appointment start time (${startTime.toLocaleTimeString()}) is outside working hours (${workingHours.start} - ${workingHours.end})`);
     }
   }
 
