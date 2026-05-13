@@ -250,6 +250,14 @@ const getAvailableSlots = async (req: Request, res: Response) => {
       return res.json([]);
     }
 
+    console.log('🕐 Horários de trabalho:', {
+      selectedDate: selectedDate.toDateString(),
+      workingHours,
+      workStart: workStart.toLocaleString(),
+      workEnd: workEnd.toLocaleString(),
+      durationMinutes: service.durationMinutes,
+    });
+
     const appointments = await appointmentRepository.findByProfessional(tenant.id, professional.id);
     const dayStart = new Date(selectedDate);
     dayStart.setHours(0, 0, 0, 0);
@@ -270,9 +278,15 @@ const getAvailableSlots = async (req: Request, res: Response) => {
     const bufferMs = professional.bufferMinutes * 60 * 1000;
 
     const availableSlots: string[] = [];
+    let slotCount = 0;
     for (let current = new Date(workStart); current.getTime() + durationMs <= workEnd.getTime(); current = addMinutes(current, 30)) {
       const slotStart = new Date(current);
       const slotEnd = new Date(slotStart.getTime() + durationMs);
+
+      // Garantir que o slot está dentro do horário de funcionamento
+      if (slotStart.getTime() < workStart.getTime() || slotEnd.getTime() > workEnd.getTime()) {
+        continue;
+      }
 
       if (selectedDate.toDateString() === now.toDateString() && slotStart < now) {
         continue;
@@ -288,8 +302,14 @@ const getAvailableSlots = async (req: Request, res: Response) => {
 
       if (isValid) {
         availableSlots.push(formatSlot(slotStart));
+        slotCount++;
       }
     }
+
+    console.log('✅ Slots gerados:', {
+      totalSlots: slotCount,
+      slots: availableSlots,
+    });
 
     res.json(availableSlots);
   } catch (error) {
