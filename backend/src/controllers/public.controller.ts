@@ -45,6 +45,16 @@ const parseTime = (time: string) => {
   return { hours, minutes };
 };
 
+const getNormalizedScheduleValue = <T>(schedule: Record<string, T> | undefined, keys: string[]) => {
+  if (!schedule) return undefined;
+  const normalizedSchedule = Object.entries(schedule).reduce<Record<string, T>>((acc, [key, value]) => {
+    acc[key.trim().toLowerCase()] = value;
+    return acc;
+  }, {} as Record<string, T>);
+
+  return keys.reduce<T | undefined>((found, key) => found ?? normalizedSchedule[key.trim().toLowerCase()], undefined as T | undefined);
+};
+
 const getWeekdayKeys = (date: Date) => {
   const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
   const dayNamesShort = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
@@ -98,9 +108,7 @@ const getBusinessHoursForDate = async (tenantId: string, professionalId: string,
   const dayKeys = getWeekdayKeys(date);
 
   if (professional?.workingHours) {
-    const professionalHours = dayKeys
-      .map((key) => professional.workingHours?.[key])
-      .find(Boolean);
+    const professionalHours = getNormalizedScheduleValue(professional.workingHours, dayKeys);
 
     if (professionalHours) {
       return professionalHours.isWorking ? professionalHours : null;
@@ -112,7 +120,7 @@ const getBusinessHoursForDate = async (tenantId: string, professionalId: string,
     return null;
   }
 
-  const range = dayKeys.map((key) => tenant.businessHours[key]).find(Boolean);
+  const range = getNormalizedScheduleValue(tenant.businessHours, dayKeys);
   if (!range) {
     return null;
   }
