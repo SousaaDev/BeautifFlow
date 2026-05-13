@@ -63,10 +63,25 @@ const transactionRepository = new TransactionRepositoryImpl(pool);
 const automationEngine = new AutomationEngine();
 const notificationService = new NotificationService();
 
-const parseBusinessHours = (range: string) => {
-  const [start, end] = range.split(/[-–—]/).map((part) => part.trim());
-  if (!start || !end) return null;
-  return { start, end };
+const parseBusinessHours = (range: unknown) => {
+  if (!range) return null;
+
+  if (typeof range === 'string') {
+    const normalized = range.trim().toLowerCase();
+    if (normalized === 'closed' || normalized === 'fechado') return null;
+    const [start, end] = range.split(/[-–—]/).map((part) => part.trim());
+    if (!start || !end) return null;
+    return { start, end };
+  }
+
+  if (typeof range === 'object' && range !== null) {
+    const maybeRange = range as { start?: string; end?: string };
+    if (maybeRange.start && maybeRange.end) {
+      return { start: maybeRange.start.trim(), end: maybeRange.end.trim() };
+    }
+  }
+
+  return null;
 };
 
 const getNormalizedScheduleValue = <T>(schedule: Record<string, T> | undefined, keys: string[]) => {
@@ -83,7 +98,9 @@ const getWeekdayKeys = (date: Date) => {
   const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
   const dayNamesShort = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
   const ptDayNames = ['domingo', 'segunda-feira', 'terça-feira', 'quarta-feira', 'quinta-feira', 'sexta-feira', 'sábado'];
+  const ptDayNamesNoAccent = ['domingo', 'segunda-feira', 'terca-feira', 'quarta-feira', 'quinta-feira', 'sexta-feira', 'sabado'];
   const ptDayNamesShort = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb'];
+  const ptDayNamesShortNoAccent = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sab'];
   const keys: string[] = [];
 
   const addKey = (locale: string, format: 'long' | 'short') =>
@@ -96,7 +113,10 @@ const getWeekdayKeys = (date: Date) => {
   keys.push(dayNames[date.getDay()]);
   keys.push(dayNamesShort[date.getDay()]);
   keys.push(ptDayNames[date.getDay()]);
+  keys.push(ptDayNamesNoAccent[date.getDay()]);
   keys.push(ptDayNamesShort[date.getDay()]);
+  keys.push(ptDayNamesShortNoAccent[date.getDay()]);
+  keys.push(String(date.getDay()));
 
   return Array.from(new Set(keys.filter(Boolean)));
 };
@@ -156,12 +176,11 @@ export const validateAppointmentConflicts = async (
   const professional = await profRepository.findByTenantAndId(tenantId, professionalId);
 
   if (professional?.workingHours) {
-    const dayKeyFull = startTime.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
-    const dayKeyShort = startTime.toLocaleDateString('en-US', { weekday: 'short' }).toLowerCase();
-    const professionalHours = professional.workingHours[dayKeyFull] || professional.workingHours[dayKeyShort];
+    const dayKeys = getWeekdayKeys(startTime);
+    const professionalHours = getNormalizedScheduleValue(professional.workingHours, dayKeys);
 
     if (professionalHours && !professionalHours.isWorking) {
-      errors.push(`Professional is not working on ${dayKeyFull}`);
+      errors.push(`Professional is not working on ${dayKeys[0]}`);
     }
   }
 

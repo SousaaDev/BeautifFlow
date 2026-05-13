@@ -28,10 +28,25 @@ const signCustomerToken = (payload: object, expiresIn = '7d') => {
 const getDateKey = (date: Date) =>
   date.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
 
-const parseWorkingHours = (range: string) => {
-  const [start, end] = range.split(/[-–—]/).map((value) => value.trim());
-  if (!start || !end) return null;
-  return { start, end };
+const parseWorkingHours = (range: unknown) => {
+  if (!range) return null;
+
+  if (typeof range === 'string') {
+    const normalized = range.trim().toLowerCase();
+    if (normalized === 'closed' || normalized === 'fechado') return null;
+    const [start, end] = range.split(/[-–—]/).map((value) => value.trim());
+    if (!start || !end) return null;
+    return { start, end };
+  }
+
+  if (typeof range === 'object' && range !== null) {
+    const maybeRange = range as { start?: string; end?: string };
+    if (maybeRange.start && maybeRange.end) {
+      return { start: maybeRange.start.trim(), end: maybeRange.end.trim() };
+    }
+  }
+
+  return null;
 };
 
 const parseDateOnly = (value: string) => {
@@ -59,7 +74,9 @@ const getWeekdayKeys = (date: Date) => {
   const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
   const dayNamesShort = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
   const ptDayNames = ['domingo', 'segunda-feira', 'terça-feira', 'quarta-feira', 'quinta-feira', 'sexta-feira', 'sábado'];
+  const ptDayNamesNoAccent = ['domingo', 'segunda-feira', 'terca-feira', 'quarta-feira', 'quinta-feira', 'sexta-feira', 'sabado'];
   const ptDayNamesShort = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb'];
+  const ptDayNamesShortNoAccent = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sab'];
   const keys: string[] = [];
 
   const addKey = (locale: string, format: 'long' | 'short') =>
@@ -72,7 +89,10 @@ const getWeekdayKeys = (date: Date) => {
   keys.push(dayNames[date.getDay()]);
   keys.push(dayNamesShort[date.getDay()]);
   keys.push(ptDayNames[date.getDay()]);
+  keys.push(ptDayNamesNoAccent[date.getDay()]);
   keys.push(ptDayNamesShort[date.getDay()]);
+  keys.push(ptDayNamesShortNoAccent[date.getDay()]);
+  keys.push(String(date.getDay()));
 
   return Array.from(new Set(keys.filter(Boolean)));
 };
