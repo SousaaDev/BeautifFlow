@@ -163,7 +163,8 @@ export interface ProfessionalFormData {
   email?: string
   phone?: string
   isActive: boolean
-  workingHours?: Record<string, WorkingHoursEntry>
+  commissionRate?: number
+  bufferMinutes?: number
 }
 
 export interface CustomerFormData {

@@ -74,18 +74,6 @@ const getNormalizedScheduleValue = <T>(schedule: Record<string, T> | undefined, 
 const formatLocalYmd = (date: Date) =>
   `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 
-const CALENDAR_DAY_KEY = /^\d{4}-\d{2}-\d{2}$/;
-
-const WEEKDAY_KEYS = [
-  'monday',
-  'tuesday',
-  'wednesday',
-  'thursday',
-  'friday',
-  'saturday',
-  'sunday',
-] as const;
-
 const getWeekdayKeys = (date: Date) => {
   const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
   const dayNamesShort = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
@@ -140,81 +128,17 @@ const isOverlapping = (
   endB: Date
 ) => startA < endB && endA > startB;
 
-/** Dashboard sends per-day objects { isWorking, start, end }; detect to merge with tenant defaults correctly */
-const isWorkingHoursEntry = (value: unknown): value is { isWorking?: boolean; start?: string; end?: string } =>
-  typeof value === 'object' && value !== null && 'isWorking' in value;
-
-/** Profissional criado com salão sem horário: os 7 dias ficam isWorking=false vazio — deve herdar o tenant depois que o dono configura /settings */
-const isBlankWeeklySchedule = (normPro: Record<string, unknown>): boolean => {
-  const weekPresent = WEEKDAY_KEYS.filter((k) => normPro[k] !== undefined);
-  if (weekPresent.length !== WEEKDAY_KEYS.length) return false;
-  return WEEKDAY_KEYS.every((k) => {
-    const v = normPro[k];
-    if (!isWorkingHoursEntry(v)) return false;
-    return v.isWorking === false && !String(v.start ?? '').trim() && !String(v.end ?? '').trim();
-  });
-};
-
-const getBusinessHoursForDate = async (tenantId: string, professionalId: string, date: Date) => {
+/** Horário de atendimento público: apenas o cadastro global do salão (Configurações), igual para todos os profissionais */
+const getTenantBusinessHoursForDate = async (tenantId: string, date: Date) => {
   const dayKeys = getWeekdayKeys(date);
-
   const tenant = await tenantRepository.findById(tenantId);
   if (!tenant) {
     return null;
   }
-
-  let businessHoursValue: unknown = getNormalizedScheduleValue(tenant.businessHours, dayKeys);
-
-  const professional = await professionalRepository.findByTenantAndId(tenantId, professionalId);
-  if (!professional?.workingHours || typeof professional.workingHours !== 'object') {
-    if (!businessHoursValue) return null;
-    return parseWorkingHours(businessHoursValue);
-  }
-
-  const proWh = professional.workingHours as Record<string, unknown>;
-  if (Object.keys(proWh).length === 0) {
-    if (!businessHoursValue) return null;
-    return parseWorkingHours(businessHoursValue);
-  }
-
-  const normPro = Object.fromEntries(
-    Object.entries(proWh).map(([k, v]) => [k.trim().toLowerCase(), v])
-  );
-
-  const localYmd = formatLocalYmd(date);
-  if (CALENDAR_DAY_KEY.test(localYmd) && normPro[localYmd] !== undefined) {
-    const ex = normPro[localYmd];
-    if (isWorkingHoursEntry(ex) && ex.isWorking === false) {
-      return null;
-    }
-    const parsedEx = parseWorkingHours(ex);
-    if (parsedEx) return parsedEx;
-  }
-
-  if (isBlankWeeklySchedule(normPro)) {
-    if (!businessHoursValue) return null;
-    return parseWorkingHours(businessHoursValue);
-  }
-
-  const professionalHours = getNormalizedScheduleValue(proWh, dayKeys);
-  if (professionalHours !== undefined && professionalHours !== null) {
-    if (isWorkingHoursEntry(professionalHours)) {
-      if (professionalHours.isWorking === false) {
-        return null;
-      }
-      const parsedProfessional = parseWorkingHours(professionalHours);
-      if (parsedProfessional) {
-        businessHoursValue = professionalHours;
-      }
-    } else if (parseWorkingHours(professionalHours)) {
-      businessHoursValue = professionalHours;
-    }
-  }
-
+  const businessHoursValue = getNormalizedScheduleValue(tenant.businessHours, dayKeys);
   if (!businessHoursValue) {
     return null;
   }
-
   return parseWorkingHours(businessHoursValue);
 };
 
@@ -306,7 +230,7 @@ const getAvailableSlots = async (req: Request, res: Response) => {
     }
 
     const selectedDate = parseDateOnly(query.date);
-    const workingHours = await getBusinessHoursForDate(tenant.id, professional.id, selectedDate);
+    const workingHours = await getTenantBusinessHoursForDate(tenant.id, selectedDate);
     if (!workingHours) {
       return res.json([]);
     }

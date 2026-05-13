@@ -3,23 +3,12 @@ import { z } from 'zod';
 import { pool } from '../database/connection';
 import { ProfessionalRepositoryImpl } from '../models/ProfessionalRepositoryImpl';
 
-const workingHoursEntrySchema = z
-  .object({
-    isWorking: z.boolean(),
-    start: z.string().default(''),
-    end: z.string().default(''),
-  })
-  .refine((value) => !value.isWorking || (value.start.trim() !== '' && value.end.trim() !== ''), {
-    message: 'Start and end times are required when the professional is working',
-    path: ['start'],
-  });
-
 const createProfessionalSchema = z.object({
   name: z.string().min(1),
   phone: z.string().optional(),
   commissionRate: z.number().min(0).max(100).default(0),
   bufferMinutes: z.number().int().min(0).default(10),
-  workingHours: z.record(workingHoursEntrySchema).optional(),
+  isActive: z.boolean().optional(),
 });
 
 const updateProfessionalSchema = createProfessionalSchema.partial();
@@ -32,12 +21,16 @@ export const store = async (req: Request, res: Response) => {
     if (!tenantId) {
       return res.status(400).json({ error: 'tenantId is required' });
     }
-    
+
     const data = createProfessionalSchema.parse(req.body);
     const professional = await profRepository.create({
       tenantId,
-      ...data,
-      isActive: true,
+      name: data.name,
+      phone: data.phone,
+      commissionRate: data.commissionRate,
+      bufferMinutes: data.bufferMinutes,
+      workingHours: {},
+      isActive: data.isActive ?? true,
     });
     res.status(201).json(professional);
   } catch (error) {
@@ -79,13 +72,16 @@ export const update = async (req: Request, res: Response) => {
   try {
     const { id, tenantId } = req.params;
     const data = updateProfessionalSchema.parse(req.body);
-    
+
     const existing = await profRepository.findByTenantAndId(tenantId, id);
     if (!existing) {
       return res.status(404).json({ error: 'Professional not found' });
     }
-    
-    const updated = await profRepository.update(id, data);
+
+    const updated = await profRepository.update(id, {
+      ...data,
+      workingHours: {},
+    });
     res.json(updated);
   } catch (error) {
     if (error instanceof z.ZodError) {
