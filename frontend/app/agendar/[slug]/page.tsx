@@ -132,7 +132,24 @@ export default function PublicBookingPage() {
           selectedProfessional.id,
           dateStr
         )
-        setAvailableSlots(slots)
+        
+        // Filtrar horários que já passaram ou que não têm tempo suficiente
+        const now = new Date()
+        const serviceDurationMs = (selectedService.duration || 0) * 60 * 1000
+        
+        const filteredSlots = slots.filter((time) => {
+          const [hours, minutes] = time.split(':').map(Number)
+          const slotDateTime = new Date(selectedDate)
+          slotDateTime.setHours(hours, minutes, 0, 0)
+          
+          // Calcular quando o slot terminaria
+          const slotEndDateTime = new Date(slotDateTime.getTime() + serviceDurationMs)
+          
+          // Remover horários que já passaram ou que não podem ser completados
+          return slotEndDateTime > now
+        })
+        
+        setAvailableSlots(filteredSlots)
       } catch (error) {
         setAvailableSlots([])
       } finally {
