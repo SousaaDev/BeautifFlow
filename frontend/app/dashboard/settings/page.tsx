@@ -126,8 +126,16 @@ export default function SettingsPage() {
         })
       }
 
-      // Update tenant
-      const tenantPayload: any = {}
+      // Update tenant — sempre enviar horários comerciais e buffer (evita não persistir por comparação JSON / estado desatualizado)
+      const tenantPayload: {
+        name?: string
+        slug?: string
+        businessHours: Record<string, string>
+        bufferMinutes: number
+      } = {
+        businessHours,
+        bufferMinutes,
+      }
       if (companyName !== tenant.name) {
         tenantPayload.name = companyName
       }
@@ -135,28 +143,7 @@ export default function SettingsPage() {
         tenantPayload.slug = companySlug
       }
 
-      const currentHours = tenant.businessHours || {}
-      const normalizedCurrentHours = {
-        monday: currentHours.monday ?? '',
-        tuesday: currentHours.tuesday ?? '',
-        wednesday: currentHours.wednesday ?? '',
-        thursday: currentHours.thursday ?? '',
-        friday: currentHours.friday ?? '',
-        saturday: currentHours.saturday ?? '',
-        sunday: currentHours.sunday ?? '',
-      }
-
-      if (JSON.stringify(normalizedCurrentHours) !== JSON.stringify(businessHours)) {
-        tenantPayload.businessHours = businessHours
-      }
-
-      if (bufferMinutes !== tenant.bufferMinutes) {
-        tenantPayload.bufferMinutes = bufferMinutes
-      }
-
-      if (Object.keys(tenantPayload).length > 0) {
-        await tenantApi.update(tenant.id, tenantPayload)
-      }
+      await tenantApi.update(tenant.id, tenantPayload)
 
       // Save notification preferences
       await settingsApi.updateNotificationSettings(notificationsEnabled)
