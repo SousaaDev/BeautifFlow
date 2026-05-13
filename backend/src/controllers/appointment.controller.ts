@@ -167,6 +167,13 @@ export const validateAppointmentConflicts = async (
     return { isValid: false, errors, conflicts };
   }
 
+  // 1.5. Reject appointments in the past
+  const now = new Date();
+  if (startTime < now) {
+    errors.push(`Appointment start time (${startTime.toLocaleTimeString()}) is in the past (current time: ${now.toLocaleTimeString()})`);
+    return { isValid: false, errors, conflicts };
+  }
+
   // 2. Validate service duration matches appointment duration
   const appointmentDuration = (endTime.getTime() - startTime.getTime()) / (1000 * 60);
   if (Math.abs(appointmentDuration - serviceDuration) > 1) { // Allow 1 minute tolerance
@@ -195,7 +202,9 @@ export const validateAppointmentConflicts = async (
     workStart.setHours(startHour, startMin, 0, 0);
     workEnd.setHours(endHour, endMin, 0, 0);
 
-    if (startTime < workStart || startTime >= workEnd) {
+    // Allow appointments that START before or at closing time, even if they extend beyond
+    // but reject appointments that START after closing time
+    if (startTime < workStart || startTime > workEnd) {
       errors.push(`Appointment start time (${startTime.toLocaleTimeString()}) is outside working hours (${workingHours.start} - ${workingHours.end})`);
     }
   }
@@ -303,7 +312,14 @@ export const store = async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'Professional not found' });
     }
 
+    // Get tenant for buffer_minutes configuration
+    const tenant = await tenantRepository.findById(tenantId);
+    if (!tenant) {
+      return res.status(404).json({ error: 'Tenant not found' });
+    }
+
     // Validação 4: Verificar conflitos robustos com buffer time e working hours
+    // Use tenant's buffer_minutes (configured by owner)
     const validation = await validateAppointmentConflicts(
       tenantId,
       data.professionalId,
@@ -311,7 +327,7 @@ export const store = async (req: Request, res: Response) => {
       startTime,
       endTime,
       service.durationMinutes,
-      professional.bufferMinutes
+      tenant.bufferMinutes
     );
 
     if (!validation.isValid) {

@@ -7,11 +7,11 @@ export class TenantRepositoryImpl implements TenantRepository {
 
   async create(tenant: Omit<Tenant, 'id' | 'createdAt'>): Promise<Tenant> {
     const query = `
-      INSERT INTO beauty_shops (slug, name, trial_ends_at, business_hours, settings)
-      VALUES ($1, $2, $3, $4, $5)
-      RETURNING id, slug, name, trial_ends_at, business_hours, settings, created_at
+      INSERT INTO beauty_shops (slug, name, trial_ends_at, business_hours, buffer_minutes, settings)
+      VALUES ($1, $2, $3, $4, $5, $6)
+      RETURNING id, slug, name, trial_ends_at, business_hours, buffer_minutes, settings, created_at
     `;
-    const values = [tenant.slug, tenant.name, tenant.trialEndsAt, JSON.stringify(tenant.businessHours), JSON.stringify(tenant.settings || {})];
+    const values = [tenant.slug, tenant.name, tenant.trialEndsAt, JSON.stringify(tenant.businessHours), tenant.bufferMinutes || 10, JSON.stringify(tenant.settings || {})];
     const result = await this.pool.query(query, values);
     return this.mapRowToTenant(result.rows[0]);
   }
@@ -34,6 +34,7 @@ export class TenantRepositoryImpl implements TenantRepository {
       'name',
       'trialEndsAt',
       'businessHours',
+      'bufferMinutes',
       'settings',
     ];
     const fields: string[] = [];
@@ -56,7 +57,7 @@ export class TenantRepositoryImpl implements TenantRepository {
       UPDATE beauty_shops
       SET ${fields.join(', ')}
       WHERE id = $${values.length + 1}
-      RETURNING id, slug, name, trial_ends_at, business_hours, settings, created_at
+      RETURNING id, slug, name, trial_ends_at, business_hours, buffer_minutes, settings, created_at
     `;
     values.push(id);
 
@@ -78,6 +79,8 @@ export class TenantRepositoryImpl implements TenantRepository {
         return 'trial_ends_at';
       case 'businessHours':
         return 'business_hours';
+      case 'bufferMinutes':
+        return 'buffer_minutes';
       case 'settings':
         return 'settings';
       default:
@@ -92,6 +95,7 @@ export class TenantRepositoryImpl implements TenantRepository {
       name: row.name,
       trialEndsAt: row.trial_ends_at,
       businessHours: row.business_hours,
+      bufferMinutes: row.buffer_minutes || 10,
       settings: row.settings,
       createdAt: row.created_at,
     };
