@@ -6,10 +6,10 @@ import { ProfessionalRepositoryImpl } from '../models/ProfessionalRepositoryImpl
 const workingHoursEntrySchema = z
   .object({
     isWorking: z.boolean(),
-    start: z.string().optional(),
-    end: z.string().optional(),
+    start: z.string().default(''),
+    end: z.string().default(''),
   })
-  .refine((value) => !value.isWorking || (!!value.start && !!value.end), {
+  .refine((value) => !value.isWorking || (value.start.trim() !== '' && value.end.trim() !== ''), {
     message: 'Start and end times are required when the professional is working',
     path: ['start'],
   });
