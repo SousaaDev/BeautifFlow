@@ -1,6 +1,7 @@
 import { Pool } from 'pg';
 import { Tenant } from './Tenant';
 import { TenantRepository } from './TenantRepository';
+import { coerceBusinessHoursRecord, coerceSettingsRecord } from '../utils/businessHoursSchedule';
 
 export class TenantRepositoryImpl implements TenantRepository {
   constructor(private pool: Pool) {}
@@ -94,9 +95,9 @@ export class TenantRepositoryImpl implements TenantRepository {
       slug: row.slug,
       name: row.name,
       trialEndsAt: row.trial_ends_at,
-      businessHours: row.business_hours,
+      businessHours: coerceBusinessHoursRecord(row.business_hours) ?? {},
       bufferMinutes: row.buffer_minutes || 10,
-      settings: row.settings,
+      settings: coerceSettingsRecord(row.settings),
       createdAt: row.created_at,
     };
   }

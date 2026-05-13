@@ -13,6 +13,12 @@ import { TenantRepositoryImpl } from '../models/TenantRepositoryImpl';
 import { AutomationEngine } from '../services/AutomationEngine';
 import { NotificationService } from '../services/NotificationService';
 import { redisClient } from '../infrastructure/redis';
+import {
+  coerceBusinessHoursRecord,
+  getNormalizedScheduleValue,
+  getWeekdayKeys,
+  parseWorkingHoursRange,
+} from '../utils/businessHoursSchedule';
 
 const createAppointmentSchema = z.object({
   customerId: z.string().uuid(),
@@ -63,68 +69,6 @@ const transactionRepository = new TransactionRepositoryImpl(pool);
 const automationEngine = new AutomationEngine();
 const notificationService = new NotificationService();
 
-const parseBusinessHours = (range: unknown) => {
-  if (!range) return null;
-
-  if (typeof range === 'string') {
-    const normalized = range.trim().toLowerCase();
-    if (normalized === 'closed' || normalized === 'fechado') return null;
-    const [start, end] = range.split(/[-–—]/).map((part) => part.trim());
-    if (!start || !end) return null;
-    return { start, end };
-  }
-
-  if (typeof range === 'object' && range !== null) {
-    const maybeRange = range as { start?: string; end?: string };
-    if (maybeRange.start && maybeRange.end) {
-      return { start: maybeRange.start.trim(), end: maybeRange.end.trim() };
-    }
-  }
-
-  return null;
-};
-
-const getNormalizedScheduleValue = <T>(schedule: Record<string, T> | undefined, keys: string[]) => {
-  if (!schedule) return undefined;
-  const normalizedSchedule = Object.entries(schedule).reduce<Record<string, T>>((acc, [key, value]) => {
-    acc[key.trim().toLowerCase()] = value;
-    return acc;
-  }, {} as Record<string, T>);
-
-  return keys.reduce<T | undefined>((found, key) => found ?? normalizedSchedule[key.trim().toLowerCase()], undefined as T | undefined);
-};
-
-const formatLocalYmd = (date: Date) =>
-  `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-
-const getWeekdayKeys = (date: Date) => {
-  const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
-  const dayNamesShort = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
-  const ptDayNames = ['domingo', 'segunda-feira', 'terça-feira', 'quarta-feira', 'quinta-feira', 'sexta-feira', 'sábado'];
-  const ptDayNamesNoAccent = ['domingo', 'segunda-feira', 'terca-feira', 'quarta-feira', 'quinta-feira', 'sexta-feira', 'sabado'];
-  const ptDayNamesShort = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb'];
-  const ptDayNamesShortNoAccent = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sab'];
-  const keys: string[] = [];
-
-  const addKey = (locale: string, format: 'long' | 'short') =>
-    keys.push(date.toLocaleDateString(locale, { weekday: format }).toLowerCase());
-
-  keys.push(formatLocalYmd(date));
-  addKey('en-US', 'long');
-  addKey('en-US', 'short');
-  addKey('pt-BR', 'long');
-  addKey('pt-BR', 'short');
-  keys.push(dayNames[date.getDay()]);
-  keys.push(dayNamesShort[date.getDay()]);
-  keys.push(ptDayNames[date.getDay()]);
-  keys.push(ptDayNamesNoAccent[date.getDay()]);
-  keys.push(ptDayNamesShort[date.getDay()]);
-  keys.push(ptDayNamesShortNoAccent[date.getDay()]);
-  keys.push(String(date.getDay()));
-
-  return Array.from(new Set(keys.filter(Boolean)));
-};
-
 const getWorkingHoursForDate = async (tenantId: string, _professionalId: string, date: Date) => {
   const dayKeys = getWeekdayKeys(date);
 
@@ -133,13 +77,14 @@ const getWorkingHoursForDate = async (tenantId: string, _professionalId: string,
     return null;
   }
 
-  const businessHoursValue = getNormalizedScheduleValue(tenant.businessHours, dayKeys);
+  const hours = coerceBusinessHoursRecord(tenant.businessHours) ?? {};
+  const businessHoursValue = getNormalizedScheduleValue(hours, dayKeys);
 
   if (!businessHoursValue) {
     return null;
   }
 
-  return parseBusinessHours(businessHoursValue);
+  return parseWorkingHoursRange(businessHoursValue);
 };
 
 // Enhanced conflict validation with buffer time and working hours
