@@ -125,24 +125,35 @@ const isOverlapping = (
   endB: Date
 ) => startA < endB && endA > startB;
 
+/** Dashboard sends per-day objects { isWorking, start, end }; detect to merge with tenant defaults correctly */
+const isWorkingHoursEntry = (value: unknown): value is { isWorking?: boolean; start?: string; end?: string } =>
+  typeof value === 'object' && value !== null && 'isWorking' in value;
+
 const getBusinessHoursForDate = async (tenantId: string, professionalId: string, date: Date) => {
   const dayKeys = getWeekdayKeys(date);
-  
-  // First, get tenant's business hours (default)
+
   const tenant = await tenantRepository.findById(tenantId);
   if (!tenant) {
     return null;
   }
 
-  let businessHoursValue: any = getNormalizedScheduleValue(tenant.businessHours, dayKeys);
-  
-  // If professional has specific working hours configured, use as exception
+  let businessHoursValue: unknown = getNormalizedScheduleValue(tenant.businessHours, dayKeys);
+
   const professional = await professionalRepository.findByTenantAndId(tenantId, professionalId);
   if (professional?.workingHours && Object.keys(professional.workingHours).length > 0) {
     const professionalHours = getNormalizedScheduleValue(professional.workingHours, dayKeys);
-    if (professionalHours) {
-      // Professional has specific configuration for this day
-      businessHoursValue = professionalHours;
+    if (professionalHours !== undefined && professionalHours !== null) {
+      if (isWorkingHoursEntry(professionalHours)) {
+        if (professionalHours.isWorking === false) {
+          return null;
+        }
+        const parsedProfessional = parseWorkingHours(professionalHours);
+        if (parsedProfessional) {
+          businessHoursValue = professionalHours;
+        }
+      } else if (parseWorkingHours(professionalHours)) {
+        businessHoursValue = professionalHours;
+      }
     }
   }
 

@@ -55,6 +55,7 @@ const buildTenantPayload = async (tenant: Tenant) => {
     currentPlan: activeSubscription?.planId ?? null,
     stripeCustomerId: null,
     businessHours: tenant.businessHours || {},
+    bufferMinutes: tenant.bufferMinutes ?? 10,
     createdAt: tenant.createdAt.toISOString(),
     updatedAt: tenant.createdAt.toISOString(),
   };
