@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { CreditCard, Settings as SettingsIcon, User, Building, Bell, Shield } from 'lucide-react'
+import { CreditCard, Settings as SettingsIcon, User, Building, Bell, Shield, Clock } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -33,6 +33,15 @@ export default function SettingsPage() {
   const [userEmail, setUserEmail] = useState(user?.email || '')
   const [companyName, setCompanyName] = useState(tenant?.name || '')
   const [companySlug, setCompanySlug] = useState(tenant?.slug || '')
+  const [businessHours, setBusinessHours] = useState<Record<string, string>>({
+    monday: '',
+    tuesday: '',
+    wednesday: '',
+    thursday: '',
+    friday: '',
+    saturday: '',
+    sunday: '',
+  })
   const [isLoading, setIsLoading] = useState(false)
 
   // Notification preferences
@@ -62,6 +71,23 @@ export default function SettingsPage() {
 
     loadNotificationSettings()
   }, [])
+
+  useEffect(() => {
+    if (!tenant) return
+
+    setCompanyName(tenant.name)
+    setCompanySlug(tenant.slug)
+
+    setBusinessHours({
+      monday: tenant.businessHours?.monday ?? '',
+      tuesday: tenant.businessHours?.tuesday ?? '',
+      wednesday: tenant.businessHours?.wednesday ?? '',
+      thursday: tenant.businessHours?.thursday ?? '',
+      friday: tenant.businessHours?.friday ?? '',
+      saturday: tenant.businessHours?.saturday ?? '',
+      sunday: tenant.businessHours?.sunday ?? '',
+    })
+  }, [tenant])
 
   const hasActiveSubscription = tenant?.status === 'ACTIVE'
   const hasTrial = isTrialing && !isExpired
@@ -99,11 +125,31 @@ export default function SettingsPage() {
       }
 
       // Update tenant
-      if (companyName !== tenant.name || companySlug !== tenant.slug) {
-        await tenantApi.update(tenant.id, {
-          name: companyName,
-          slug: companySlug,
-        })
+      const tenantPayload: Partial<Pick<typeof tenant, 'name' | 'slug' | 'businessHours'>> = {}
+      if (companyName !== tenant.name) {
+        tenantPayload.name = companyName
+      }
+      if (companySlug !== tenant.slug) {
+        tenantPayload.slug = companySlug
+      }
+
+      const currentHours = tenant.businessHours || {}
+      const normalizedCurrentHours = {
+        monday: currentHours.monday ?? '',
+        tuesday: currentHours.tuesday ?? '',
+        wednesday: currentHours.wednesday ?? '',
+        thursday: currentHours.thursday ?? '',
+        friday: currentHours.friday ?? '',
+        saturday: currentHours.saturday ?? '',
+        sunday: currentHours.sunday ?? '',
+      }
+
+      if (JSON.stringify(normalizedCurrentHours) !== JSON.stringify(businessHours)) {
+        tenantPayload.businessHours = businessHours
+      }
+
+      if (Object.keys(tenantPayload).length > 0) {
+        await tenantApi.update(tenant.id, tenantPayload)
       }
 
       // Save notification preferences
@@ -277,6 +323,94 @@ export default function SettingsPage() {
                     value={companySlug}
                     onChange={(e) => setCompanySlug(e.target.value)}
                     className="text-sm" 
+                  />
+                </div>
+              </div>
+            </div>
+
+            <Separator />
+
+            <div className="space-y-4">
+              <div className="flex items-center gap-2">
+                <Clock className="w-4 h-4 text-muted-foreground" />
+                <h4 className="text-sm font-medium">Horários comerciais</h4>
+              </div>
+              <p className="text-sm text-muted-foreground pl-6">
+                Configure o horário de funcionamento do salão para cada dia da semana.
+                Use o formato <span className="font-medium">08:00-18:00</span> ou deixe vazio para indicar fechamento.
+              </p>
+              <p className="text-sm text-muted-foreground pl-6">
+                Este horário será usado como padrão do salão. Cada profissional pode ter sua própria agenda e exceções no cadastro de profissionais.
+              </p>
+              <div className="grid gap-3 pl-6 md:grid-cols-2 xl:grid-cols-3">
+                <div className="grid gap-2">
+                  <Label htmlFor="business-hours-monday" className="text-xs text-muted-foreground">Segunda</Label>
+                  <Input
+                    id="business-hours-monday"
+                    value={businessHours.monday}
+                    onChange={(e) => setBusinessHours(prev => ({ ...prev, monday: e.target.value }))}
+                    className="text-sm"
+                    placeholder="08:00-18:00"
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="business-hours-tuesday" className="text-xs text-muted-foreground">Terça</Label>
+                  <Input
+                    id="business-hours-tuesday"
+                    value={businessHours.tuesday}
+                    onChange={(e) => setBusinessHours(prev => ({ ...prev, tuesday: e.target.value }))}
+                    className="text-sm"
+                    placeholder="08:00-18:00"
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="business-hours-wednesday" className="text-xs text-muted-foreground">Quarta</Label>
+                  <Input
+                    id="business-hours-wednesday"
+                    value={businessHours.wednesday}
+                    onChange={(e) => setBusinessHours(prev => ({ ...prev, wednesday: e.target.value }))}
+                    className="text-sm"
+                    placeholder="08:00-18:00"
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="business-hours-thursday" className="text-xs text-muted-foreground">Quinta</Label>
+                  <Input
+                    id="business-hours-thursday"
+                    value={businessHours.thursday}
+                    onChange={(e) => setBusinessHours(prev => ({ ...prev, thursday: e.target.value }))}
+                    className="text-sm"
+                    placeholder="08:00-18:00"
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="business-hours-friday" className="text-xs text-muted-foreground">Sexta</Label>
+                  <Input
+                    id="business-hours-friday"
+                    value={businessHours.friday}
+                    onChange={(e) => setBusinessHours(prev => ({ ...prev, friday: e.target.value }))}
+                    className="text-sm"
+                    placeholder="08:00-18:00"
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="business-hours-saturday" className="text-xs text-muted-foreground">Sábado</Label>
+                  <Input
+                    id="business-hours-saturday"
+                    value={businessHours.saturday}
+                    onChange={(e) => setBusinessHours(prev => ({ ...prev, saturday: e.target.value }))}
+                    className="text-sm"
+                    placeholder="08:00-18:00"
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="business-hours-sunday" className="text-xs text-muted-foreground">Domingo</Label>
+                  <Input
+                    id="business-hours-sunday"
+                    value={businessHours.sunday}
+                    onChange={(e) => setBusinessHours(prev => ({ ...prev, sunday: e.target.value }))}
+                    className="text-sm"
+                    placeholder="Fechado"
                   />
                 </div>
               </div>

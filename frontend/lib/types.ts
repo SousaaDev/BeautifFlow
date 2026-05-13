@@ -10,6 +10,7 @@ export interface Tenant {
   trialEndsAt: string | null
   currentPlan: string | null
   stripeCustomerId: string | null
+  businessHours?: Record<string, string>
   createdAt: string
   updatedAt: string
 }
@@ -28,6 +29,12 @@ export interface AuthResponse {
   user: User
 }
 
+export interface WorkingHoursEntry {
+  isWorking: boolean
+  start: string
+  end: string
+}
+
 export interface Professional {
   id: string
   tenantId: string
@@ -36,6 +43,7 @@ export interface Professional {
   phone: string | null
   avatarUrl: string | null
   isActive: boolean
+  workingHours?: Record<string, WorkingHoursEntry>
   createdAt: string
   updatedAt: string
 }
@@ -154,6 +162,7 @@ export interface ProfessionalFormData {
   email?: string
   phone?: string
   isActive: boolean
+  workingHours?: Record<string, WorkingHoursEntry>
 }
 
 export interface CustomerFormData {
