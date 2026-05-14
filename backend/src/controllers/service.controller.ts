@@ -31,6 +31,17 @@ export const store = async (req: Request, res: Response) => {
       commissionRate: data.commissionRate,
       isActive: true,
     });
+    try {
+      await pool.query(
+        `INSERT INTO professional_services (professional_id, service_id)
+         SELECT p.id, $1::uuid FROM professionals p
+         WHERE p.tenant_id = $2
+         ON CONFLICT DO NOTHING`,
+        [service.id, tenantId]
+      );
+    } catch (e) {
+      console.warn('Warning: failed to seed professional services for new service:', e);
+    }
     res.status(201).json(service);
   } catch (error) {
     if (error instanceof z.ZodError) {
