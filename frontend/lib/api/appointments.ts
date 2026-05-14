@@ -61,7 +61,10 @@ export const appointmentsApi = {
 
   // Public endpoint for customer booking
   getAvailableSlots: (slug: string, serviceId: string, professionalId: string, date: string) =>
-    api.get<string[]>(`/api/public/${slug}/available-slots?serviceId=${serviceId}&professionalId=${professionalId}&date=${date}`, { skipAuth: true }),
+    api.get<string[]>(
+      `/api/public/${slug}/available-slots?serviceId=${encodeURIComponent(serviceId)}&professionalId=${encodeURIComponent(professionalId)}&date=${encodeURIComponent(date)}&tzOffset=${new Date().getTimezoneOffset()}`,
+      { skipAuth: true }
+    ),
 
   createPublic: (slug: string, data: AppointmentFormData & { customerName: string; customerEmail: string; customerPhone?: string; customerId?: string }) =>
     api.post<Appointment>(`/api/public/${slug}/appointments`, data, { skipAuth: true }),
