@@ -1,10 +1,10 @@
 'use client'
 
-import { useState } from 'react'
+import { Suspense, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { useParams, useRouter } from 'next/navigation'
+import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import { toast } from 'sonner'
 import { Loader2 } from 'lucide-react'
 
@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { publicApi } from '@/lib/api/public'
+import { publicCustomerChangedEvent } from '@/lib/bookingDraft'
 
 const loginSchema = z.object({
   email: z.string().email('Email invalido'),
@@ -29,8 +30,19 @@ type PublicCustomer = {
 }
 
 export default function PublicCustomerLoginPage() {
+  return (
+    <Suspense
+      fallback={<div className="max-w-md mx-auto py-12 text-center text-muted-foreground">Carregando…</div>}
+    >
+      <PublicCustomerLoginInner />
+    </Suspense>
+  )
+}
+
+function PublicCustomerLoginInner() {
   const params = useParams()
   const router = useRouter()
+  const searchParams = useSearchParams()
   const slug = params.slug as string
   const [isLoading, setIsLoading] = useState(false)
 
@@ -60,8 +72,10 @@ export default function PublicCustomerLoginPage() {
       }
 
       window.localStorage.setItem('beautyflow_public_customer', JSON.stringify(customer))
+      window.dispatchEvent(new Event(publicCustomerChangedEvent))
       toast.success('Login realizado com sucesso')
-      router.push(`/agendar/${slug}`)
+      const next = searchParams.get('next')
+      router.push(next === 'confirm' ? `/agendar/${slug}?resume=1` : `/agendar/${slug}`)
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Erro ao entrar na conta'
       toast.error(message)
@@ -107,7 +121,11 @@ export default function PublicCustomerLoginPage() {
         <button
           type="button"
           className="font-medium text-primary hover:underline"
-          onClick={() => router.push(`/agendar/${slug}/register`)}
+          onClick={() =>
+            router.push(
+              `/agendar/${slug}/register${searchParams.toString() ? `?${searchParams.toString()}` : ''}`
+            )
+          }
         >
           Criar conta de cliente
         </button>
