@@ -73,13 +73,26 @@ export const normalizeStoredBusinessHours = (raw: unknown): Record<string, strin
 /**
  * Aceita o payload do front (strings, `{ closed }`, `{ start, end }`, aliases open/close)
  * e grava sempre strings compatíveis com a agenda pública.
+ * Também aceita JSON em string (ex.: body duplo ou proxy).
  */
 export const normalizeBusinessHoursPayload = (input: unknown): Record<string, string> => {
   const out: Record<string, string> = {};
   if (input === null || input === undefined) return out;
-  if (typeof input !== 'object' || Array.isArray(input)) return out;
 
-  for (const [rawKey, val] of Object.entries(input as Record<string, unknown>)) {
+  let parsed: unknown = input;
+  if (typeof parsed === 'string') {
+    const t = parsed.trim();
+    if (!t) return out;
+    try {
+      parsed = JSON.parse(t) as unknown;
+    } catch {
+      return out;
+    }
+  }
+
+  if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) return out;
+
+  for (const [rawKey, val] of Object.entries(parsed as Record<string, unknown>)) {
     const key = rawKey.trim().toLowerCase();
     if (!key) continue;
 

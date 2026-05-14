@@ -9,16 +9,16 @@ export class TenantRepositoryImpl implements TenantRepository {
   async create(tenant: Omit<Tenant, 'id' | 'createdAt'>): Promise<Tenant> {
     const query = `
       INSERT INTO beauty_shops (slug, name, trial_ends_at, business_hours, buffer_minutes, settings)
-      VALUES ($1, $2, $3, $4, $5, $6)
+      VALUES ($1, $2, $3, $4::jsonb, $5, $6::jsonb)
       RETURNING id, slug, name, trial_ends_at, business_hours, buffer_minutes, settings, created_at
     `;
     const values = [
       tenant.slug,
       tenant.name,
       tenant.trialEndsAt,
-      tenant.businessHours ?? {},
+      JSON.stringify(tenant.businessHours ?? {}),
       tenant.bufferMinutes || 10,
-      tenant.settings || {},
+      JSON.stringify(tenant.settings || {}),
     ];
     const result = await this.pool.query(query, values);
     return this.mapRowToTenant(result.rows[0]);
@@ -50,10 +50,14 @@ export class TenantRepositoryImpl implements TenantRepository {
 
     for (const key of allowedFields) {
       if (tenant[key] !== undefined) {
-        fields.push(`${this.toColumnName(key)} = $${values.length + 1}`);
-        values.push(
-          key === 'businessHours' || key === 'settings' ? (tenant[key] as object) ?? {} : tenant[key]
-        );
+        const col = this.toColumnName(key);
+        if (key === 'businessHours' || key === 'settings') {
+          fields.push(`${col} = $${values.length + 1}::jsonb`);
+          values.push(JSON.stringify((tenant[key] as object) ?? {}));
+        } else {
+          fields.push(`${col} = $${values.length + 1}`);
+          values.push(tenant[key]);
+        }
       }
     }
 

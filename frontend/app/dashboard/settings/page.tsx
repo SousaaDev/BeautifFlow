@@ -140,9 +140,11 @@ export default function SettingsPage() {
         name?: string
         slug?: string
         businessHours: Record<string, string>
+        business_hours: Record<string, string>
         bufferMinutes: number
       } = {
         businessHours: businessHoursPayload,
+        business_hours: businessHoursPayload,
         bufferMinutes,
       }
       if (companyName !== tenant.name) {

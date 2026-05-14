@@ -51,33 +51,47 @@ export const show = async (req: Request, res: Response) => {
   }
 };
 
-const updateTenantSchema = z.object({
-  name: z.string().optional(),
-  slug: z.string().optional(),
-  businessHours: z.unknown().optional(),
-  bufferMinutes: z.number().int().min(0).optional(),
-  trialEndsAt: z.string().optional(),
-});
+const updateTenantSchema = z
+  .object({
+    name: z.string().optional(),
+    slug: z.string().optional(),
+    businessHours: z.unknown().optional(),
+    business_hours: z.unknown().optional(),
+    bufferMinutes: z.number().int().min(0).optional(),
+    buffer_minutes: z.number().int().min(0).optional(),
+    trialEndsAt: z.string().optional(),
+  })
+  .passthrough();
 
 export const update = async (req: Request, res: Response) => {
   const { id } = req.params;
   const auth = req as any;
 
   // Verify the user can only update their own tenant (UUID vs string seguro)
-  if (String(auth.user?.tenantId) !== String(id)) {
+  const authUser = auth.user as { tenantId?: string; tenant_id?: string } | undefined;
+  if (String(authUser?.tenantId ?? authUser?.tenant_id) !== String(id)) {
     return res.status(403).json({ error: 'Forbidden: Cannot update this tenant' });
   }
 
   try {
     const data = updateTenantSchema.parse(req.body);
+    const rawBody = req.body as Record<string, unknown>;
+    const hoursRaw =
+      data.businessHours !== undefined && data.businessHours !== null
+        ? data.businessHours
+        : data.business_hours !== undefined && data.business_hours !== null
+          ? data.business_hours
+          : rawBody?.business_hours ?? rawBody?.businessHours;
+
     const updateData: Partial<Tenant> = {};
     if (data.name !== undefined) updateData.name = data.name;
     if (data.slug !== undefined) updateData.slug = data.slug;
-    if (data.businessHours !== undefined) {
-      updateData.businessHours = normalizeBusinessHoursPayload(data.businessHours);
+    if (hoursRaw !== undefined && hoursRaw !== null) {
+      updateData.businessHours = normalizeBusinessHoursPayload(hoursRaw);
     }
-    if (data.bufferMinutes !== undefined) {
-      updateData.bufferMinutes = data.bufferMinutes;
+    const bufferVal = data.bufferMinutes ?? data.buffer_minutes;
+    if (bufferVal !== undefined) {
+      updateData.bufferMinutes = bufferVal;
     }
     if (data.trialEndsAt) {
       updateData.trialEndsAt = new Date(data.trialEndsAt);
