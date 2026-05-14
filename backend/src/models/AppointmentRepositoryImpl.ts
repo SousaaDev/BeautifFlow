@@ -237,7 +237,9 @@ export class AppointmentRepositoryImpl implements AppointmentRepository {
       LEFT JOIN customers c ON a.customer_id = c.id
       LEFT JOIN services s ON a.service_id = s.id
       LEFT JOIN professionals p ON a.professional_id = p.id
-      WHERE a.tenant_id = $1 AND a.start_time >= $2 AND a.end_time <= $3
+      WHERE a.tenant_id = $1
+        AND a.start_time >= $2::timestamptz
+        AND a.start_time < $3::timestamptz
       ORDER BY a.start_time ASC
     `;
     const result = await this.pool.query(query, [tenantId, startDate, endDate]);

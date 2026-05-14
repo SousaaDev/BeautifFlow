@@ -31,6 +31,7 @@ import {
   parseISO,
   startOfDay,
   endOfDay,
+  addDays,
 } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 
@@ -191,11 +192,11 @@ export default function AppointmentsPage() {
     if (!tenant?.id) return
     setIsLoading(true)
     try {
-      const start = startOfWeek(currentWeek, { weekStartsOn: 1 })
-      const end = endOfWeek(currentWeek, { weekStartsOn: 1 })
+      const weekStart = startOfDay(startOfWeek(currentWeek, { weekStartsOn: 1 }))
+      const weekEndExclusive = addDays(weekStart, 7)
       const data = await appointmentsApi.list(tenant.id, {
-        startDate: start.toISOString(),
-        endDate: end.toISOString(),
+        startDate: weekStart.toISOString(),
+        endDate: weekEndExclusive.toISOString(),
       })
       setAppointments(data)
 
@@ -319,7 +320,12 @@ export default function AppointmentsPage() {
   }
 
   const getAppointmentsForDay = (date: Date) => {
-    return appointments.filter((a) => isSameDay(parseISO(a.startTime), date))
+    return appointments.filter((a) => {
+      if (!a.startTime) return false
+      const t = parseISO(a.startTime)
+      if (Number.isNaN(t.getTime())) return false
+      return isSameDay(t, date)
+    })
   }
 
   const getCustomerName = (customerId: string) => {
