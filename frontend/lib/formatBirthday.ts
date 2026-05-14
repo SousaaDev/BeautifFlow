@@ -1,7 +1,8 @@
-/** Exibe aniversário (dia/mês) a partir de data de nascimento YYYY-MM-DD, sem depender de fuso. */
-export function formatBirthdayDisplay(ymd: string | null | undefined): string {
-  if (!ymd) return '-'
-  const m = ymd.match(/^(\d{4})-(\d{2})-(\d{2})$/)
+/** Aceita YYYY-MM-DD ou prefixo ISO (YYYY-MM-DDTHH...) vindo da API. */
+export function formatBirthdayDisplay(raw: string | null | undefined): string {
+  if (!raw) return '-'
+  const head = raw.trim().slice(0, 10)
+  const m = head.match(/^(\d{4})-(\d{2})-(\d{2})$/)
   if (!m) return '-'
   return `${m[3]}/${m[2]}`
 }

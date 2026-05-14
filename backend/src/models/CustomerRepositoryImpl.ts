@@ -158,23 +158,34 @@ export class CustomerRepositoryImpl implements CustomerRepository {
   }
 
   private mapRowToCustomer(row: any): Customer {
-    const rawBirth = row.birth_date;
-    let birthDate: string | undefined;
-    if (rawBirth) {
-      birthDate = String(rawBirth).split('T')[0].split(' ')[0];
-    }
     return {
       id: row.id,
       tenantId: row.tenant_id,
       name: row.name,
       phone: row.phone,
       email: row.email,
-      birthDate,
+      birthDate: this.normalizeBirthDate(row.birth_date),
       passwordHash: row.password_hash || undefined,
       tags: row.tags,
       lastVisit: row.last_visit,
       createdAt: row.created_at,
       deletedAt: row.deleted_at,
     };
+  }
+
+  /** DATE do Postgres pode vir como string ou Date; evitar String(Date) que quebra YYYY-MM-DD. */
+  private normalizeBirthDate(value: unknown): string | undefined {
+    if (value == null || value === '') return undefined;
+    if (typeof value === 'string') {
+      const part = value.includes('T') ? value.split('T')[0]! : value.split(' ')[0]!;
+      return /^\d{4}-\d{2}-\d{2}$/.test(part) ? part : undefined;
+    }
+    if (value instanceof Date && !Number.isNaN(value.getTime())) {
+      const y = value.getFullYear();
+      const m = String(value.getMonth() + 1).padStart(2, '0');
+      const d = String(value.getDate()).padStart(2, '0');
+      return `${y}-${m}-${d}`;
+    }
+    return undefined;
   }
 }
