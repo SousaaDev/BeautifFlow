@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
-import { useParams, useRouter } from 'next/navigation'
+import { Suspense, useRef, useState, useEffect, useCallback } from 'react'
+import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -22,6 +22,12 @@ import { ptBR } from 'date-fns/locale'
 import { publicApi } from '@/lib/api/public'
 import { appointmentsApi } from '@/lib/api/appointments'
 import { ApiError } from '@/lib/api/client'
+import {
+  clearPublicBookingDraft,
+  loadPublicBookingDraft,
+  publicCustomerChangedEvent,
+  savePublicBookingDraft,
+} from '@/lib/bookingDraft'
 import type { Professional, Service, Tenant } from '@/lib/types'
 
 import { Button } from '@/components/ui/button'
@@ -54,6 +60,26 @@ type Step = 'service' | 'professional' | 'datetime' | 'info' | 'success'
 const formatPrice = (value: number | string | null | undefined) => Number(value ?? 0).toFixed(2)
 
 export default function PublicBookingPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="space-y-6">
+          <Skeleton className="h-12 w-64 mx-auto" />
+          <Skeleton className="h-6 w-48 mx-auto" />
+          <div className="grid gap-4 md:grid-cols-2">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <Skeleton key={i} className="h-32" />
+            ))}
+          </div>
+        </div>
+      }
+    >
+      <PublicBookingPageContent />
+    </Suspense>
+  )
+}
+
+function PublicBookingPageContent() {
   const params = useParams()
   const slug = params.slug as string
 
@@ -64,6 +90,8 @@ export default function PublicBookingPage() {
   const [services, setServices] = useState<Service[]>([])
 
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const resume = searchParams.get('resume')
   const [step, setStep] = useState<Step>('service')
   const [selectedService, setSelectedService] = useState<Service | null>(null)
   const [selectedProfessional, setSelectedProfessional] = useState<Professional | null>(null)
@@ -73,11 +101,11 @@ export default function PublicBookingPage() {
   const [isLoadingSlots, setIsLoadingSlots] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [loggedCustomer, setLoggedCustomer] = useState<PublicCustomer | null>(null)
+  const resumeHandled = useRef(false)
 
   const {
     register,
     handleSubmit,
-    setValue,
     reset,
     formState: { errors },
   } = useForm<BookingFormData>({
@@ -102,6 +130,10 @@ export default function PublicBookingPage() {
   }, [slug])
 
   useEffect(() => {
+    resumeHandled.current = false
+  }, [slug])
+
+  useEffect(() => {
     if (typeof window === 'undefined') return
 
     const storedCustomer = window.localStorage.getItem('beautyflow_public_customer')
@@ -109,6 +141,7 @@ export default function PublicBookingPage() {
       try {
         const customer = JSON.parse(storedCustomer) as PublicCustomer
         setLoggedCustomer(customer)
+        window.dispatchEvent(new Event(publicCustomerChangedEvent))
         reset({
           customerName: customer.name,
           customerEmail: customer.email,
@@ -118,6 +151,29 @@ export default function PublicBookingPage() {
         window.localStorage.removeItem('beautyflow_public_customer')
       }
     }
+  }, [reset])
+
+  useEffect(() => {
+    const onAuthChange = () => {
+      const raw = window.localStorage.getItem('beautyflow_public_customer')
+      if (!raw) {
+        setLoggedCustomer(null)
+        return
+      }
+      try {
+        const customer = JSON.parse(raw) as PublicCustomer
+        setLoggedCustomer(customer)
+        reset({
+          customerName: customer.name,
+          customerEmail: customer.email,
+          customerPhone: customer.phone ?? undefined,
+        })
+      } catch {
+        setLoggedCustomer(null)
+      }
+    }
+    window.addEventListener(publicCustomerChangedEvent, onAuthChange)
+    return () => window.removeEventListener(publicCustomerChangedEvent, onAuthChange)
   }, [reset])
 
   const fetchAvailableSlots = useCallback(async (): Promise<string[]> => {
@@ -177,8 +233,90 @@ export default function PublicBookingPage() {
     return () => document.removeEventListener('visibilitychange', refresh)
   }, [step, fetchAvailableSlots, selectedService, selectedProfessional, selectedDate])
 
+  useEffect(() => {
+    if (resume !== '1') return
+    if (resumeHandled.current) return
+    if (!salon || services.length === 0 || professionals.length === 0) return
+
+    const draft = loadPublicBookingDraft(slug)
+    if (!draft) {
+      resumeHandled.current = true
+      router.replace(`/agendar/${slug}`, { scroll: false })
+      toast.error('Não encontramos o agendamento em andamento.')
+      return
+    }
+
+    const svc = services.find((s) => s.id === draft.serviceId)
+    const prof = professionals.find((p) => p.id === draft.professionalId)
+    if (!svc || !prof) {
+      resumeHandled.current = true
+      clearPublicBookingDraft(slug)
+      router.replace(`/agendar/${slug}`, { scroll: false })
+      toast.error('Serviço ou profissional não está mais disponível.')
+      return
+    }
+
+    resumeHandled.current = true
+
+    setSelectedService(svc)
+    setSelectedProfessional(prof)
+    const [y, mo, d] = draft.dateYmd.split('-').map(Number)
+    if (Number.isNaN(y) || Number.isNaN(mo) || Number.isNaN(d)) {
+      clearPublicBookingDraft(slug)
+      router.replace(`/agendar/${slug}`, { scroll: false })
+      toast.error('Data inválida no rascunho.')
+      return
+    }
+    setSelectedDate(new Date(y, mo - 1, d, 12, 0, 0, 0))
+    setSelectedTime(draft.time)
+    setStep('info')
+
+    const raw = window.localStorage.getItem('beautyflow_public_customer')
+    if (raw) {
+      try {
+        const c = JSON.parse(raw) as PublicCustomer
+        reset({
+          customerName: c.name,
+          customerEmail: c.email,
+          customerPhone: c.phone ?? undefined,
+        })
+      } catch {
+        reset({
+          customerName: draft.customerName,
+          customerEmail: draft.customerEmail,
+          customerPhone: draft.customerPhone,
+        })
+      }
+    } else {
+      reset({
+        customerName: draft.customerName,
+        customerEmail: draft.customerEmail,
+        customerPhone: draft.customerPhone,
+      })
+    }
+
+    router.replace(`/agendar/${slug}`, { scroll: false })
+    toast.success('Conta conectada — confirme o agendamento abaixo.')
+  }, [resume, salon, services, professionals, slug, router, reset])
+
   const onSubmit = async (data: BookingFormData) => {
     if (!selectedService || !selectedProfessional || !selectedDate || !selectedTime) return
+
+    if (!loggedCustomer) {
+      savePublicBookingDraft(slug, {
+        v: 1,
+        serviceId: selectedService.id,
+        professionalId: selectedProfessional.id,
+        dateYmd: format(selectedDate, 'yyyy-MM-dd'),
+        time: selectedTime,
+        customerName: data.customerName,
+        customerEmail: data.customerEmail,
+        customerPhone: data.customerPhone,
+      })
+      toast.info('Entre ou crie sua conta no topo da página para confirmar o agendamento.')
+      router.push(`/agendar/${slug}/login?next=confirm`)
+      return
+    }
 
     setIsSubmitting(true)
     try {
@@ -187,7 +325,7 @@ export default function PublicBookingPage() {
       startTime.setHours(hours, minutes, 0, 0)
 
       await appointmentsApi.createPublic(slug, {
-        customerId: loggedCustomer?.id ?? '',
+        customerId: loggedCustomer.id,
         professionalId: selectedProfessional.id,
         serviceId: selectedService.id,
         startTime: startTime.toISOString(),
@@ -196,6 +334,7 @@ export default function PublicBookingPage() {
         customerPhone: data.customerPhone,
       })
 
+      clearPublicBookingDraft(slug)
       setStep('success')
     } catch (error) {
       if (error instanceof ApiError && error.status === 409) {
@@ -213,12 +352,6 @@ export default function PublicBookingPage() {
     } finally {
       setIsSubmitting(false)
     }
-  }
-
-  const logoutCustomer = () => {
-    window.localStorage.removeItem('beautyflow_public_customer')
-    setLoggedCustomer(null)
-    reset({ customerName: '', customerEmail: '', customerPhone: undefined })
   }
 
   const goBack = () => {
@@ -322,34 +455,10 @@ export default function PublicBookingPage() {
         </p>
       </div>
 
-      <div className="flex flex-col gap-3 md:flex-row items-center justify-center">
-        {loggedCustomer ? (
-          <div className="rounded-lg border border-primary/20 bg-primary/5 p-4 text-center">
-            <p className="text-sm text-muted-foreground">Cliente logado</p>
-            <p className="font-medium">{loggedCustomer.name}</p>
-            <p className="text-sm">{loggedCustomer.email}</p>
-            <button
-              type="button"
-              onClick={logoutCustomer}
-              className="mt-2 text-sm text-primary underline"
-            >
-              Sair da conta
-            </button>
-          </div>
-        ) : (
-          <div className="grid gap-2 sm:grid-cols-2">
-            <Button
-              variant="outline"
-              onClick={() => router.push(`/agendar/${slug}/login`)}
-            >
-              Ja tenho conta
-            </Button>
-            <Button onClick={() => router.push(`/agendar/${slug}/register`)}>
-              Criar conta
-            </Button>
-          </div>
-        )}
-      </div>
+      <p className="text-center text-sm text-muted-foreground max-w-lg mx-auto">
+        Escolha serviço, profissional e horário à vontade. Para <span className="font-medium text-foreground">confirmar</span>, use{' '}
+        <span className="font-medium text-foreground">Entrar</span> ou <span className="font-medium text-foreground">Criar conta</span> no topo da página.
+      </p>
 
       {/* Progress */}
       <div className="flex items-center justify-center gap-2">
@@ -572,6 +681,12 @@ export default function PublicBookingPage() {
         <div className="max-w-md mx-auto space-y-6">
           <h2 className="text-xl font-semibold text-center">Seus dados</h2>
 
+          {!loggedCustomer && (
+            <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-foreground dark:bg-amber-950/40 dark:border-amber-800">
+              Ao continuar, abrimos o <strong>login ou cadastro</strong>. Depois que você entrar, voltamos para esta tela para você <strong>confirmar o agendamento</strong>.
+            </div>
+          )}
+
           {loggedCustomer && (
             <div className="rounded-lg border border-primary/20 bg-primary/5 p-4 text-sm text-foreground">
               <p className="font-medium">Você está logado como {loggedCustomer.name}</p>
@@ -626,7 +741,7 @@ export default function PublicBookingPage() {
 
             <Button type="submit" className="w-full" disabled={isSubmitting}>
               {isSubmitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-              Confirmar agendamento
+              {loggedCustomer ? 'Confirmar agendamento' : 'Ir para login e depois confirmar'}
             </Button>
           </form>
         </div>
