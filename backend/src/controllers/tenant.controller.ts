@@ -51,50 +51,61 @@ export const show = async (req: Request, res: Response) => {
   }
 };
 
-const updateTenantSchema = z
-  .object({
-    name: z.string().optional(),
-    slug: z.string().optional(),
-    businessHours: z.unknown().optional(),
-    business_hours: z.unknown().optional(),
-    bufferMinutes: z.number().int().min(0).optional(),
-    buffer_minutes: z.number().int().min(0).optional(),
-    trialEndsAt: z.string().optional(),
-  })
-  .passthrough();
+const readJsonBody = (req: Request): Record<string, unknown> => {
+  const b = req.body;
+  if (!b || typeof b !== 'object' || Array.isArray(b)) return {};
+  return b as Record<string, unknown>;
+};
 
 export const update = async (req: Request, res: Response) => {
   const { id } = req.params;
   const auth = req as any;
 
-  // Verify the user can only update their own tenant (UUID vs string seguro)
   const authUser = auth.user as { tenantId?: string; tenant_id?: string } | undefined;
   if (String(authUser?.tenantId ?? authUser?.tenant_id) !== String(id)) {
     return res.status(403).json({ error: 'Forbidden: Cannot update this tenant' });
   }
 
   try {
-    const data = updateTenantSchema.parse(req.body);
-    const rawBody = req.body as Record<string, unknown>;
-    const hoursRaw =
-      data.businessHours !== undefined && data.businessHours !== null
-        ? data.businessHours
-        : data.business_hours !== undefined && data.business_hours !== null
-          ? data.business_hours
-          : rawBody?.business_hours ?? rawBody?.businessHours;
+    const body = readJsonBody(req);
 
     const updateData: Partial<Tenant> = {};
-    if (data.name !== undefined) updateData.name = data.name;
-    if (data.slug !== undefined) updateData.slug = data.slug;
-    if (hoursRaw !== undefined && hoursRaw !== null) {
-      updateData.businessHours = normalizeBusinessHoursPayload(hoursRaw);
+
+    if (Object.prototype.hasOwnProperty.call(body, 'name') && typeof body.name === 'string') {
+      updateData.name = body.name;
     }
-    const bufferVal = data.bufferMinutes ?? data.buffer_minutes;
-    if (bufferVal !== undefined) {
-      updateData.bufferMinutes = bufferVal;
+    if (Object.prototype.hasOwnProperty.call(body, 'slug') && typeof body.slug === 'string') {
+      updateData.slug = body.slug;
     }
-    if (data.trialEndsAt) {
-      updateData.trialEndsAt = new Date(data.trialEndsAt);
+
+    const hasBusinessHours =
+      Object.prototype.hasOwnProperty.call(body, 'businessHours') ||
+      Object.prototype.hasOwnProperty.call(body, 'business_hours');
+    if (hasBusinessHours) {
+      const hoursRaw = body.businessHours ?? body.business_hours;
+      updateData.businessHours = normalizeBusinessHoursPayload(hoursRaw ?? {});
+    }
+
+    const hasBuffer =
+      Object.prototype.hasOwnProperty.call(body, 'bufferMinutes') ||
+      Object.prototype.hasOwnProperty.call(body, 'buffer_minutes');
+    if (hasBuffer) {
+      const bufferRaw = body.bufferMinutes ?? body.buffer_minutes;
+      const n = Number(bufferRaw);
+      if (!Number.isNaN(n) && n >= 0) {
+        updateData.bufferMinutes = Math.floor(n);
+      }
+    }
+
+    if (Object.prototype.hasOwnProperty.call(body, 'trialEndsAt') && typeof body.trialEndsAt === 'string') {
+      const t = body.trialEndsAt.trim();
+      if (t) {
+        updateData.trialEndsAt = new Date(t);
+      }
+    }
+
+    if (Object.keys(updateData).length === 0) {
+      return res.status(400).json({ error: 'No fields to update' });
     }
 
     const tenant = await tenantRepository.update(id, updateData);
