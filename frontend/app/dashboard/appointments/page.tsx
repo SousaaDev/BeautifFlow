@@ -138,6 +138,7 @@ export default function AppointmentsPage() {
     reset,
     control,
     watch,
+    setValue,
     formState: { errors },
   } = useForm<AppointmentFormData>({
     resolver: zodResolver(appointmentSchema),
@@ -152,7 +153,41 @@ export default function AppointmentsPage() {
   })
 
   const selectedServiceId = watch('serviceId')
+  const selectedProfessionalId = watch('professionalId')
   const selectedService = services.find((s) => s.id === selectedServiceId)
+  const selectedProfessionalForForm = professionals.find((p) => p.id === selectedProfessionalId)
+
+  const servicesForForm = useMemo(() => {
+    if (!selectedProfessionalId) return services
+    const ids = selectedProfessionalForForm?.serviceIds
+    if (!ids || ids.length === 0) return []
+    return services.filter((s) => ids.includes(s.id))
+  }, [services, selectedProfessionalId, selectedProfessionalForForm])
+
+  const professionalsForForm = useMemo(() => {
+    if (!selectedServiceId) return professionals
+    return professionals.filter((p) => (p.serviceIds ?? []).includes(selectedServiceId))
+  }, [professionals, selectedServiceId])
+
+  useEffect(() => {
+    if (!selectedServiceId || !selectedProfessionalId) return
+    const p = professionals.find((x) => x.id === selectedProfessionalId)
+    if (!p) return
+    const ids = p.serviceIds ?? []
+    if (ids.length > 0 && !ids.includes(selectedServiceId)) {
+      setValue('professionalId', '')
+    }
+  }, [selectedServiceId, selectedProfessionalId, professionals, setValue])
+
+  useEffect(() => {
+    if (!selectedProfessionalId || !selectedServiceId) return
+    const p = professionals.find((x) => x.id === selectedProfessionalId)
+    if (!p) return
+    const ids = p.serviceIds ?? []
+    if (ids.length > 0 && !ids.includes(selectedServiceId)) {
+      setValue('serviceId', '')
+    }
+  }, [selectedProfessionalId, selectedServiceId, professionals, setValue])
 
   const weekDays = useMemo(() => {
     const start = startOfWeek(currentWeek, { weekStartsOn: 1 })
@@ -358,17 +393,11 @@ export default function AppointmentsPage() {
 
   return (
     <div className="p-6 lg:p-8 space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">Agendamentos</h1>
-          <p className="text-muted-foreground">
-            Gerencie os agendamentos do seu salao
-          </p>
-        </div>
-        <Button onClick={() => openCreateDialog()} className="gap-2">
-          <CalendarIcon className="w-4 h-4" />
-          Novo agendamento
-        </Button>
+      <div>
+        <h1 className="text-2xl font-bold text-foreground">Agendamentos</h1>
+        <p className="text-muted-foreground">
+          Gerencie os agendamentos do seu salao
+        </p>
       </div>
 
       {/* Week Navigation */}
@@ -607,7 +636,7 @@ export default function AppointmentsPage() {
                       <SelectValue placeholder="Selecione um servico" />
                     </SelectTrigger>
                     <SelectContent>
-                      {services.map((s) => (
+                      {servicesForForm.map((s) => (
                         <SelectItem key={s.id} value={s.id}>
                           {s.name} - R$ {s.price.toFixed(2)} ({s.duration}min)
                         </SelectItem>
@@ -618,6 +647,11 @@ export default function AppointmentsPage() {
               />
               {errors.serviceId && (
                 <p className="text-sm text-destructive">{errors.serviceId.message}</p>
+              )}
+              {selectedProfessionalId && servicesForForm.length === 0 && (
+                <p className="text-sm text-muted-foreground">
+                  Este profissional nao tem servicos vinculados. Configure em Profissionais.
+                </p>
               )}
             </div>
 
@@ -632,7 +666,7 @@ export default function AppointmentsPage() {
                       <SelectValue placeholder="Selecione um profissional" />
                     </SelectTrigger>
                     <SelectContent>
-                      {professionals.map((p) => (
+                      {professionalsForForm.map((p) => (
                         <SelectItem key={p.id} value={p.id}>
                           {p.name}
                           {!p.isActive ? ' (nao aparece online)' : ''}
@@ -644,6 +678,11 @@ export default function AppointmentsPage() {
               />
               {errors.professionalId && (
                 <p className="text-sm text-destructive">{errors.professionalId.message}</p>
+              )}
+              {selectedServiceId && professionalsForForm.length === 0 && (
+                <p className="text-sm text-muted-foreground">
+                  Nenhum profissional faz este servico. Ajuste os servicos do profissional ou escolha outro servico.
+                </p>
               )}
             </div>
 

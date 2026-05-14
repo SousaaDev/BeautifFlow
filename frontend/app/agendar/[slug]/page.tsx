@@ -1,6 +1,6 @@
 'use client'
 
-import { Suspense, useRef, useState, useEffect, useCallback } from 'react'
+import { Suspense, useRef, useState, useEffect, useCallback, useMemo } from 'react'
 import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import { toast } from 'sonner'
 import {
@@ -144,6 +144,19 @@ function PublicBookingPageContent() {
     return () => window.removeEventListener(publicCustomerChangedEvent, onAuthChange)
   }, [])
 
+  const professionalsForService = useMemo(() => {
+    if (!selectedService) return professionals
+    return professionals.filter((p) => (p.serviceIds ?? []).includes(selectedService.id))
+  }, [professionals, selectedService])
+
+  useEffect(() => {
+    if (!selectedService || !selectedProfessional) return
+    const ids = selectedProfessional.serviceIds ?? []
+    if (ids.length > 0 && !ids.includes(selectedService.id)) {
+      setSelectedProfessional(null)
+    }
+  }, [selectedService, selectedProfessional])
+
   const fetchAvailableSlots = useCallback(async (): Promise<string[]> => {
     if (!selectedService || !selectedProfessional || !selectedDate) return []
 
@@ -216,7 +229,8 @@ function PublicBookingPageContent() {
 
     const svc = services.find((s) => s.id === draft.serviceId)
     const prof = professionals.find((p) => p.id === draft.professionalId)
-    if (!svc || !prof) {
+    const profOk = prof && (prof.serviceIds ?? []).includes(svc?.id ?? '')
+    if (!svc || !prof || !profOk) {
       resumeHandled.current = true
       clearPublicBookingDraft(slug)
       router.replace(`/agendar/${slug}`, { scroll: false })
@@ -448,6 +462,7 @@ function PublicBookingPageContent() {
                 )}
                 onClick={() => {
                   setSelectedService(service)
+                  setSelectedProfessional(null)
                   setStep('professional')
                 }}
               >
@@ -482,7 +497,12 @@ function PublicBookingPageContent() {
             <Badge variant="outline">{selectedService?.name}</Badge>
           </div>
           <div className="grid gap-4 md:grid-cols-2">
-            {professionals.map((prof) => (
+            {professionalsForService.length === 0 ? (
+              <p className="text-muted-foreground col-span-full text-center py-10">
+                Nenhum profissional disponivel faz este servico. Escolha outro servico ou entre em contato com o salao.
+              </p>
+            ) : (
+              professionalsForService.map((prof) => (
               <Card
                 key={prof.id}
                 className={cn(
@@ -505,7 +525,8 @@ function PublicBookingPageContent() {
                   </div>
                 </CardContent>
               </Card>
-            ))}
+            ))
+            )}
           </div>
         </div>
       )}

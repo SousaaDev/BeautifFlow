@@ -70,6 +70,22 @@ const ensureCustomerSchema = async () => {
     await pool.query(`ALTER TABLE customers ADD COLUMN IF NOT EXISTS password_hash VARCHAR(200);`);
     await pool.query(`ALTER TABLE customers ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMP;`);
     await pool.query(`ALTER TABLE customers ADD COLUMN IF NOT EXISTS birth_date DATE;`);
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS professional_services (
+        professional_id UUID NOT NULL REFERENCES professionals(id) ON DELETE CASCADE,
+        service_id UUID NOT NULL REFERENCES services(id) ON DELETE CASCADE,
+        PRIMARY KEY (professional_id, service_id)
+      );
+    `);
+    await pool.query(
+      `CREATE INDEX IF NOT EXISTS idx_professional_services_service ON professional_services(service_id);`
+    );
+    await pool.query(`
+      INSERT INTO professional_services (professional_id, service_id)
+      SELECT p.id, s.id FROM professionals p
+      INNER JOIN services s ON s.tenant_id = p.tenant_id AND s.is_active = true
+      ON CONFLICT DO NOTHING
+    `);
     console.log('Ensured customers schema is up to date');
   } catch (error) {
     console.warn('Warning: failed to ensure customers schema:', error);

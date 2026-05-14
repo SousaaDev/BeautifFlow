@@ -45,6 +45,8 @@ export interface Professional {
   avatarUrl: string | null
   isActive: boolean
   workingHours?: Record<string, WorkingHoursEntry>
+  /** Servicos que o profissional realiza (painel + agendamento publico). */
+  serviceIds?: string[]
   createdAt: string
   updatedAt: string
 }

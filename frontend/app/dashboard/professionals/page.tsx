@@ -10,13 +10,16 @@ import { Users, MoreHorizontal, Pencil, Trash2, Loader2 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { useAuth } from '@/contexts/auth-context'
 import { professionalsApi } from '@/lib/api/professionals'
-import type { Professional } from '@/lib/types'
+import { servicesApi } from '@/lib/api/services'
+import type { Professional, Service } from '@/lib/types'
 
 import { DataTable } from '@/components/data-table'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
+import { Checkbox } from '@/components/ui/checkbox'
+import { ScrollArea } from '@/components/ui/scroll-area'
 import {
   Dialog,
   DialogContent,
@@ -52,6 +55,8 @@ type ProfessionalFormData = z.infer<typeof professionalSchema>
 export default function ProfessionalsPage() {
   const { tenant } = useAuth()
   const [professionals, setProfessionals] = useState<Professional[]>([])
+  const [salonServices, setSalonServices] = useState<Service[]>([])
+  const [selectedServiceIds, setSelectedServiceIds] = useState<string[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
@@ -79,8 +84,12 @@ export default function ProfessionalsPage() {
   const loadProfessionals = async () => {
     if (!tenant?.id) return
     try {
-      const data = await professionalsApi.list(tenant.id)
+      const [data, services] = await Promise.all([
+        professionalsApi.list(tenant.id),
+        servicesApi.list(tenant.id),
+      ])
       setProfessionals(data)
+      setSalonServices(services.filter((s) => s.isActive))
     } catch (error) {
       toast.error('Erro ao carregar profissionais')
     } finally {
@@ -91,6 +100,7 @@ export default function ProfessionalsPage() {
   const openCreateDialog = () => {
     setSelectedProfessional(null)
     reset({ name: '', isActive: true })
+    setSelectedServiceIds(salonServices.map((s) => s.id))
     setIsDialogOpen(true)
   }
 
@@ -100,6 +110,7 @@ export default function ProfessionalsPage() {
       name: professional.name,
       isActive: professional.isActive,
     })
+    setSelectedServiceIds(professional.serviceIds?.length ? [...professional.serviceIds] : [])
     setIsDialogOpen(true)
   }
 
@@ -113,17 +124,23 @@ export default function ProfessionalsPage() {
     setIsSubmitting(true)
 
     try {
+      let professionalId: string
       if (selectedProfessional) {
         await professionalsApi.update(tenant.id, selectedProfessional.id, data)
+        professionalId = selectedProfessional.id
         toast.success('Profissional atualizado com sucesso')
       } else {
-        await professionalsApi.create(tenant.id, {
+        const created = await professionalsApi.create(tenant.id, {
           ...data,
           commissionRate: 0,
           bufferMinutes: 10,
         })
+        professionalId = created.id
         toast.success('Profissional criado com sucesso')
       }
+      await professionalsApi.updateServices(tenant.id, professionalId, {
+        serviceIds: selectedServiceIds,
+      })
       setIsDialogOpen(false)
       loadProfessionals()
     } catch (error) {
@@ -165,6 +182,18 @@ export default function ProfessionalsPage() {
           <p className="font-medium">{p.name}</p>
         </div>
       ),
+    },
+    {
+      key: 'services',
+      header: 'Servicos',
+      render: (p: Professional) => {
+        const n = p.serviceIds?.length ?? 0
+        return (
+          <span className="text-sm text-muted-foreground">
+            {n === 0 ? 'Nenhum' : `${n} servico${n === 1 ? '' : 's'}`}
+          </span>
+        )
+      },
     },
     {
       key: 'booking',
@@ -235,7 +264,8 @@ export default function ProfessionalsPage() {
             <DialogDescription>
               {selectedProfessional
                 ? 'Atualize o nome e se o profissional aparece na pagina publica de agendamento. Inativos continuam listados aqui no painel.'
-                : 'Adicione um profissional. Horários do salão ficam em Configurações.'}
+                : 'Adicione um profissional. Horários do salão ficam em Configurações.'}{' '}
+              Marque abaixo quais serviços ativos este profissional realiza.
             </DialogDescription>
           </DialogHeader>
 
@@ -262,6 +292,43 @@ export default function ProfessionalsPage() {
                 checked={watch('isActive')}
                 onCheckedChange={(checked) => setValue('isActive', checked, { shouldDirty: true })}
               />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Servicos que este profissional realiza</Label>
+              {salonServices.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  Cadastre serviços ativos em Serviços para vincular aqui.
+                </p>
+              ) : (
+                <ScrollArea className="h-40 rounded-md border p-3">
+                  <div className="space-y-3">
+                    {salonServices.map((s) => (
+                      <div key={s.id} className="flex items-start gap-2">
+                        <Checkbox
+                          id={`svc-${s.id}`}
+                          checked={selectedServiceIds.includes(s.id)}
+                          onCheckedChange={(checked) => {
+                            setSelectedServiceIds((prev) => {
+                              if (checked === true) {
+                                return prev.includes(s.id) ? prev : [...prev, s.id]
+                              }
+                              return prev.filter((id) => id !== s.id)
+                            })
+                          }}
+                        />
+                        <label htmlFor={`svc-${s.id}`} className="text-sm leading-tight cursor-pointer">
+                          {s.name}
+                          <span className="text-muted-foreground">
+                            {' '}
+                            ({s.duration} min)
+                          </span>
+                        </label>
+                      </div>
+                    ))}
+                  </div>
+                </ScrollArea>
+              )}
             </div>
 
             <DialogFooter>

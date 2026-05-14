@@ -8,4 +8,6 @@ export interface Professional {
   workingHours?: Record<string, { isWorking: boolean; start: string; end: string }>; // day -> working hours
   isActive: boolean;
   createdAt: Date;
+  /** Serviços que o profissional realiza; vazio = nenhum (defina na edição). */
+  serviceIds?: string[];
 }

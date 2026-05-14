@@ -9,6 +9,9 @@ router.get('/', profController.index);
 // POST /api/tenants/:tenantId/professionals
 router.post('/', profController.store);
 
+// PUT /api/tenants/:tenantId/professionals/:id/services
+router.put('/:id/services', profController.updateServices);
+
 // GET /api/tenants/:tenantId/professionals/:id
 router.get('/:id', profController.show);
 

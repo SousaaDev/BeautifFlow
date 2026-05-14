@@ -97,6 +97,23 @@ const createTables = async () => {
     `);
     await pool.query(`ALTER TABLE services ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT NOW();`);
 
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS professional_services (
+        professional_id UUID NOT NULL REFERENCES professionals(id) ON DELETE CASCADE,
+        service_id UUID NOT NULL REFERENCES services(id) ON DELETE CASCADE,
+        PRIMARY KEY (professional_id, service_id)
+      );
+    `);
+    await pool.query(
+      `CREATE INDEX IF NOT EXISTS idx_professional_services_service ON professional_services(service_id);`
+    );
+    await pool.query(`
+      INSERT INTO professional_services (professional_id, service_id)
+      SELECT p.id, s.id FROM professionals p
+      INNER JOIN services s ON s.tenant_id = p.tenant_id AND s.is_active = true
+      ON CONFLICT DO NOTHING
+    `);
+
     // Create appointments table
     await pool.query(`
       CREATE TABLE IF NOT EXISTS appointments (
