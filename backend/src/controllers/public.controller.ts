@@ -14,6 +14,12 @@ import {
   getWeekdayKeys,
   parseWorkingHoursRange,
 } from '../utils/businessHoursSchedule';
+import {
+  formatLocalSlotLabel,
+  localDayBoundsUtc,
+  localYmdFromInstant,
+  utcInstantFromLocalWallClock,
+} from '../utils/publicBookingTime';
 
 const tenantRepository = new TenantRepositoryImpl(pool);
 const professionalRepository = new ProfessionalRepositoryImpl(pool);
@@ -133,6 +139,8 @@ const availableSlotsSchema = z.object({
   serviceId: z.string().uuid(),
   professionalId: z.string().uuid(),
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  /** Igual a `new Date().getTimezoneOffset()` no navegador (UTC − local, em minutos). */
+  tzOffset: z.coerce.number().int().optional(),
 });
 
 const registerCustomerSchema = z.object({
@@ -174,26 +182,52 @@ const getAvailableSlots = async (req: Request, res: Response) => {
       return res.json([]);
     }
 
-    const workStart = buildDateFromTime(selectedDate, workingHours.start);
-    const workEnd = buildDateFromTime(selectedDate, workingHours.end);
+    const tzOffset = query.tzOffset;
+    const useClientTz = typeof tzOffset === 'number' && !Number.isNaN(tzOffset);
+
+    let dayStart: Date;
+    let dayEnd: Date;
+    let workStart: Date | null;
+    let workEnd: Date | null;
+    let labelSlot: (d: Date) => string;
+    let isToday: boolean;
+
+    if (useClientTz) {
+      const bounds = localDayBoundsUtc(query.date, tzOffset);
+      if (!bounds) {
+        return res.json([]);
+      }
+      dayStart = bounds.dayStart;
+      dayEnd = bounds.dayEnd;
+      workStart = utcInstantFromLocalWallClock(query.date, workingHours.start, tzOffset);
+      workEnd = utcInstantFromLocalWallClock(query.date, workingHours.end, tzOffset);
+      labelSlot = (d: Date) => formatLocalSlotLabel(d, tzOffset);
+      isToday = query.date === localYmdFromInstant(new Date(), tzOffset);
+    } else {
+      dayStart = new Date(selectedDate);
+      dayStart.setHours(0, 0, 0, 0);
+      dayEnd = new Date(dayStart.getTime() + 24 * 60 * 60 * 1000);
+      workStart = buildDateFromTime(selectedDate, workingHours.start);
+      workEnd = buildDateFromTime(selectedDate, workingHours.end);
+      labelSlot = formatSlot;
+      isToday = selectedDate.toDateString() === new Date().toDateString();
+    }
 
     if (!workStart || !workEnd) {
       return res.json([]);
     }
 
     console.log('🕐 Horários de trabalho:', {
-      selectedDate: selectedDate.toDateString(),
+      date: query.date,
+      tzOffset: useClientTz ? tzOffset : 'server-local (legacy)',
       workingHours,
-      workStart: workStart.toLocaleString(),
-      workEnd: workEnd.toLocaleString(),
+      workStart: workStart.toISOString(),
+      workEnd: workEnd.toISOString(),
       durationMinutes: service.durationMinutes,
-      bufferMinutes: tenant.bufferMinutes ?? 10,
+      bufferMinutes: tenant.bufferMinutes ?? 0,
     });
 
     const appointments = await appointmentRepository.findByProfessional(tenant.id, professional.id);
-    const dayStart = new Date(selectedDate);
-    dayStart.setHours(0, 0, 0, 0);
-    const dayEnd = new Date(dayStart.getTime() + 24 * 60 * 60 * 1000);
 
     const activeAppointments = appointments
       .filter((appointment) => {
@@ -208,7 +242,7 @@ const getAvailableSlots = async (req: Request, res: Response) => {
     const now = new Date();
     const durationMs = Math.max(0, Number(service.durationMinutes ?? 0)) * 60 * 1000;
     // Descanso entre atendimentos (beauty_shops.buffer_minutes), definido pela dona
-    const bufferMinutesInt = Math.max(0, Math.floor(Number(tenant.bufferMinutes ?? 10)));
+    const bufferMinutesInt = Math.max(0, Math.floor(Number(tenant.bufferMinutes ?? 0)));
     const bufferMs = bufferMinutesInt * 60 * 1000;
 
     const tenantServices = await serviceRepository.findByTenant(tenant.id);
@@ -240,8 +274,8 @@ const getAvailableSlots = async (req: Request, res: Response) => {
         continue;
       }
 
-      // Remove slots que já passaram
-      if (selectedDate.toDateString() === now.toDateString() && slotStart < now) {
+      // Remove slots que já passaram (mesmo dia civil do cliente quando tzOffset veio na query)
+      if (isToday && slotStart < now) {
         continue;
       }
 
@@ -254,7 +288,7 @@ const getAvailableSlots = async (req: Request, res: Response) => {
       });
 
       if (isValid) {
-        availableSlots.push(formatSlot(slotStart));
+        availableSlots.push(labelSlot(slotStart));
         slotCount++;
       }
     }
@@ -265,6 +299,7 @@ const getAvailableSlots = async (req: Request, res: Response) => {
       slots: availableSlots,
     });
 
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
     res.json(availableSlots);
   } catch (error) {
     if (error instanceof z.ZodError) {
