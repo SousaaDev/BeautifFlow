@@ -2,9 +2,6 @@
 
 import { Suspense, useRef, useState, useEffect, useCallback } from 'react'
 import { useParams, useRouter, useSearchParams } from 'next/navigation'
-import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
-import { z } from 'zod'
 import { toast } from 'sonner'
 import {
   Calendar as CalendarIcon,
@@ -31,21 +28,11 @@ import {
 import type { Professional, Service, Tenant } from '@/lib/types'
 
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Calendar } from '@/components/ui/calendar'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
-
-const bookingSchema = z.object({
-  customerName: z.string().min(2, 'Nome deve ter pelo menos 2 caracteres'),
-  customerEmail: z.string().email('Email invalido'),
-  customerPhone: z.string().optional(),
-})
-
-type BookingFormData = z.infer<typeof bookingSchema>
 
 type PublicCustomer = {
   id: string
@@ -103,15 +90,6 @@ function PublicBookingPageContent() {
   const [loggedCustomer, setLoggedCustomer] = useState<PublicCustomer | null>(null)
   const resumeHandled = useRef(false)
 
-  const {
-    register,
-    handleSubmit,
-    reset,
-    formState: { errors },
-  } = useForm<BookingFormData>({
-    resolver: zodResolver(bookingSchema),
-  })
-
   useEffect(() => {
     const loadSalonData = async () => {
       try {
@@ -142,16 +120,11 @@ function PublicBookingPageContent() {
         const customer = JSON.parse(storedCustomer) as PublicCustomer
         setLoggedCustomer(customer)
         window.dispatchEvent(new Event(publicCustomerChangedEvent))
-        reset({
-          customerName: customer.name,
-          customerEmail: customer.email,
-          customerPhone: customer.phone ?? undefined,
-        })
       } catch {
         window.localStorage.removeItem('beautyflow_public_customer')
       }
     }
-  }, [reset])
+  }, [])
 
   useEffect(() => {
     const onAuthChange = () => {
@@ -163,18 +136,13 @@ function PublicBookingPageContent() {
       try {
         const customer = JSON.parse(raw) as PublicCustomer
         setLoggedCustomer(customer)
-        reset({
-          customerName: customer.name,
-          customerEmail: customer.email,
-          customerPhone: customer.phone ?? undefined,
-        })
       } catch {
         setLoggedCustomer(null)
       }
     }
     window.addEventListener(publicCustomerChangedEvent, onAuthChange)
     return () => window.removeEventListener(publicCustomerChangedEvent, onAuthChange)
-  }, [reset])
+  }, [])
 
   const fetchAvailableSlots = useCallback(async (): Promise<string[]> => {
     if (!selectedService || !selectedProfessional || !selectedDate) return []
@@ -271,52 +239,18 @@ function PublicBookingPageContent() {
     setSelectedTime(draft.time)
     setStep('info')
 
-    const raw = window.localStorage.getItem('beautyflow_public_customer')
-    if (raw) {
-      try {
-        const c = JSON.parse(raw) as PublicCustomer
-        reset({
-          customerName: c.name,
-          customerEmail: c.email,
-          customerPhone: c.phone ?? undefined,
-        })
-      } catch {
-        reset({
-          customerName: draft.customerName,
-          customerEmail: draft.customerEmail,
-          customerPhone: draft.customerPhone,
-        })
-      }
-    } else {
-      reset({
-        customerName: draft.customerName,
-        customerEmail: draft.customerEmail,
-        customerPhone: draft.customerPhone,
-      })
-    }
-
     router.replace(`/agendar/${slug}`, { scroll: false })
     toast.success('Conta conectada — confirme o agendamento abaixo.')
-  }, [resume, salon, services, professionals, slug, router, reset])
+  }, [resume, salon, services, professionals, slug, router])
 
-  const onSubmit = async (data: BookingFormData) => {
-    if (!selectedService || !selectedProfessional || !selectedDate || !selectedTime) return
-
-    if (!loggedCustomer) {
-      savePublicBookingDraft(slug, {
-        v: 1,
-        serviceId: selectedService.id,
-        professionalId: selectedProfessional.id,
-        dateYmd: format(selectedDate, 'yyyy-MM-dd'),
-        time: selectedTime,
-        customerName: data.customerName,
-        customerEmail: data.customerEmail,
-        customerPhone: data.customerPhone,
-      })
-      toast.info('Entre ou crie sua conta no topo da página para confirmar o agendamento.')
-      router.push(`/agendar/${slug}/login?next=confirm`)
-      return
+  useEffect(() => {
+    if (step === 'info' && !loggedCustomer) {
+      setStep('datetime')
     }
+  }, [step, loggedCustomer])
+
+  const confirmLoggedBooking = async () => {
+    if (!selectedService || !selectedProfessional || !selectedDate || !selectedTime || !loggedCustomer) return
 
     setIsSubmitting(true)
     try {
@@ -329,9 +263,9 @@ function PublicBookingPageContent() {
         professionalId: selectedProfessional.id,
         serviceId: selectedService.id,
         startTime: startTime.toISOString(),
-        customerName: data.customerName,
-        customerEmail: data.customerEmail,
-        customerPhone: data.customerPhone,
+        customerName: loggedCustomer.name,
+        customerEmail: loggedCustomer.email,
+        customerPhone: loggedCustomer.phone ?? undefined,
       })
 
       clearPublicBookingDraft(slug)
@@ -456,8 +390,10 @@ function PublicBookingPageContent() {
       </div>
 
       <p className="text-center text-sm text-muted-foreground max-w-lg mx-auto">
-        Escolha serviço, profissional e horário à vontade. Para <span className="font-medium text-foreground">confirmar</span>, use{' '}
-        <span className="font-medium text-foreground">Entrar</span> ou <span className="font-medium text-foreground">Criar conta</span> no topo da página.
+        Escolha servico, profissional e horario. Se voce nao estiver logado, ao clicar em{' '}
+        <span className="font-medium text-foreground">Continuar</span> abrimos a tela de{' '}
+        <span className="font-medium text-foreground">Entrar</span> ou{' '}
+        <span className="font-medium text-foreground">Criar conta</span> para concluir. Voce tambem pode usar os botoes no topo.
       </p>
 
       {/* Progress */}
@@ -662,6 +598,21 @@ function PublicBookingPageContent() {
                       )
                       return
                     }
+                    if (!loggedCustomer) {
+                      if (!selectedService || !selectedProfessional || !selectedDate) return
+                      savePublicBookingDraft(slug, {
+                        v: 1,
+                        serviceId: selectedService.id,
+                        professionalId: selectedProfessional.id,
+                        dateYmd: format(selectedDate, 'yyyy-MM-dd'),
+                        time: selectedTime,
+                        customerName: '',
+                        customerEmail: '',
+                        customerPhone: undefined,
+                      })
+                      router.push(`/agendar/${slug}/login?next=confirm`)
+                      return
+                    }
                     setStep('info')
                   } finally {
                     setIsLoadingSlots(false)
@@ -676,23 +627,18 @@ function PublicBookingPageContent() {
         </div>
       )}
 
-      {/* Step: Customer Info */}
-      {step === 'info' && (
+      {/* Step: confirmar (somente com conta) */}
+      {step === 'info' && loggedCustomer && (
         <div className="max-w-md mx-auto space-y-6">
-          <h2 className="text-xl font-semibold text-center">Seus dados</h2>
+          <h2 className="text-xl font-semibold text-center">Confirmar agendamento</h2>
 
-          {!loggedCustomer && (
-            <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-foreground dark:bg-amber-950/40 dark:border-amber-800">
-              Ao continuar, abrimos o <strong>login ou cadastro</strong>. Depois que você entrar, voltamos para esta tela para você <strong>confirmar o agendamento</strong>.
-            </div>
-          )}
-
-          {loggedCustomer && (
-            <div className="rounded-lg border border-primary/20 bg-primary/5 p-4 text-sm text-foreground">
-              <p className="font-medium">Você está logado como {loggedCustomer.name}</p>
-              <p className="text-muted-foreground">O agendamento será registrado com sua conta.</p>
-            </div>
-          )}
+          <div className="rounded-lg border border-primary/20 bg-primary/5 p-4 text-sm text-foreground">
+            <p className="font-medium">Conta: {loggedCustomer.name}</p>
+            <p className="text-muted-foreground">{loggedCustomer.email}</p>
+            {loggedCustomer.phone ? (
+              <p className="text-muted-foreground">{loggedCustomer.phone}</p>
+            ) : null}
+          </div>
 
           <Card>
             <CardContent className="pt-6 space-y-2 text-sm">
@@ -717,33 +663,15 @@ function PublicBookingPageContent() {
             </CardContent>
           </Card>
 
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="customerName">Nome completo *</Label>
-              <Input id="customerName" {...register('customerName')} />
-              {errors.customerName && (
-                <p className="text-sm text-destructive">{errors.customerName.message}</p>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="customerEmail">Email *</Label>
-              <Input id="customerEmail" type="email" {...register('customerEmail')} />
-              {errors.customerEmail && (
-                <p className="text-sm text-destructive">{errors.customerEmail.message}</p>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="customerPhone">Telefone</Label>
-              <Input id="customerPhone" {...register('customerPhone')} />
-            </div>
-
-            <Button type="submit" className="w-full" disabled={isSubmitting}>
-              {isSubmitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-              {loggedCustomer ? 'Confirmar agendamento' : 'Ir para login e depois confirmar'}
-            </Button>
-          </form>
+          <Button
+            type="button"
+            className="w-full"
+            disabled={isSubmitting}
+            onClick={() => void confirmLoggedBooking()}
+          >
+            {isSubmitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+            Confirmar agendamento
+          </Button>
         </div>
       )}
     </div>

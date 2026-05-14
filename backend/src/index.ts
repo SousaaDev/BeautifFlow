@@ -69,6 +69,7 @@ const ensureCustomerSchema = async () => {
   try {
     await pool.query(`ALTER TABLE customers ADD COLUMN IF NOT EXISTS password_hash VARCHAR(200);`);
     await pool.query(`ALTER TABLE customers ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMP;`);
+    await pool.query(`ALTER TABLE customers ADD COLUMN IF NOT EXISTS birth_date DATE;`);
     console.log('Ensured customers schema is up to date');
   } catch (error) {
     console.warn('Warning: failed to ensure customers schema:', error);
