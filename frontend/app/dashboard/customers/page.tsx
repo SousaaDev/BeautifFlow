@@ -11,12 +11,12 @@ import { format } from 'date-fns'
 import { useAuth } from '@/contexts/auth-context'
 import { customersApi } from '@/lib/api/customers'
 import type { Customer } from '@/lib/types'
+import { formatBirthdayDisplay } from '@/lib/formatBirthday'
 
 import { DataTable } from '@/components/data-table'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
 import {
   Dialog,
   DialogContent,
@@ -44,6 +44,23 @@ import {
 
 const customerSchema = z.object({
   name: z.string().min(2, 'Nome deve ter pelo menos 2 caracteres'),
+  email: z
+    .string()
+    .optional()
+    .transform((s) => (s && s.trim() ? s.trim() : ''))
+    .refine((s) => !s || z.string().email().safeParse(s).success, {
+      message: 'Email invalido',
+    }),
+  phone: z
+    .string()
+    .transform((s) => s.trim())
+    .refine((s) => s.replace(/\D/g, '').length >= 8, {
+      message: 'Telefone deve ter pelo menos 8 digitos',
+    }),
+  birthDate: z
+    .string()
+    .optional()
+    .refine((s) => !s || /^\d{4}-\d{2}-\d{2}$/.test(s), 'Data invalida'),
 })
 
 type CustomerFormData = z.infer<typeof customerSchema>
@@ -86,13 +103,18 @@ export default function CustomersPage() {
 
   const openCreateDialog = () => {
     setSelectedCustomer(null)
-    reset({ name: '' })
+    reset({ name: '', email: '', phone: '', birthDate: '' })
     setIsDialogOpen(true)
   }
 
   const openEditDialog = (customer: Customer) => {
     setSelectedCustomer(customer)
-    reset({ name: customer.name })
+    reset({
+      name: customer.name,
+      email: customer.email ?? '',
+      phone: customer.phone ?? '',
+      birthDate: customer.birthDate ?? '',
+    })
     setIsDialogOpen(true)
   }
 
@@ -106,11 +128,27 @@ export default function CustomersPage() {
     setIsSubmitting(true)
 
     try {
+      const payload: {
+        name: string
+        email?: string
+        phone: string
+        birthDate?: string | null
+      } = {
+        name: data.name,
+        phone: data.phone.trim(),
+        ...(data.email?.trim() ? { email: data.email.trim() } : {}),
+      }
+      if (data.birthDate?.trim()) {
+        payload.birthDate = data.birthDate.trim()
+      } else if (selectedCustomer) {
+        payload.birthDate = null
+      }
+
       if (selectedCustomer) {
-        await customersApi.update(selectedCustomer.id, data)
+        await customersApi.update(selectedCustomer.id, payload)
         toast.success('Cliente atualizado com sucesso')
       } else {
-        await customersApi.create(tenant.id, data)
+        await customersApi.create(tenant.id, payload)
         toast.success('Cliente criado com sucesso')
       }
       setIsDialogOpen(false)
@@ -166,8 +204,7 @@ export default function CustomersPage() {
     {
       key: 'birthDate',
       header: 'Aniversario',
-      render: (c: Customer) =>
-        c.birthDate ? format(new Date(c.birthDate), 'dd/MM') : '-',
+      render: (c: Customer) => formatBirthdayDisplay(c.birthDate),
     },
     {
       key: 'createdAt',
@@ -244,6 +281,33 @@ export default function CustomersPage() {
               <Input id="name" {...register('name')} />
               {errors.name && (
                 <p className="text-sm text-destructive">{errors.name.message}</p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
+              <Input id="email" type="email" autoComplete="off" {...register('email')} />
+              {errors.email && (
+                <p className="text-sm text-destructive">{errors.email.message}</p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="phone">Telefone *</Label>
+              <Input id="phone" type="tel" {...register('phone')} />
+              {errors.phone && (
+                <p className="text-sm text-destructive">{errors.phone.message}</p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="birthDate">Data de nascimento (opcional)</Label>
+              <Input id="birthDate" type="date" {...register('birthDate')} />
+              <p className="text-xs text-muted-foreground">
+                Na lista aparece como aniversario (dia e mes).
+              </p>
+              {errors.birthDate && (
+                <p className="text-sm text-destructive">{errors.birthDate.message}</p>
               )}
             </div>
 

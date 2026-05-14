@@ -110,7 +110,8 @@ const getSalonData = async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'Salon not found' });
     }
 
-    const professionals = await professionalRepository.findByTenant(tenant.id);
+    const allProfessionals = await professionalRepository.findByTenant(tenant.id);
+    const professionals = allProfessionals.filter((p) => p.isActive);
     const services = await serviceRepository.findByTenant(tenant.id);
 
     res.json({
@@ -143,11 +144,25 @@ const availableSlotsSchema = z.object({
   tzOffset: z.coerce.number().int().optional(),
 });
 
+const optionalDateYmd = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}$/)
+  .optional()
+  .transform((v) => (v && v.trim() ? v.trim() : undefined));
+
+const registerPhoneSchema = z
+  .string()
+  .transform((v) => v.trim())
+  .refine((v) => v.replace(/\D/g, '').length >= 8, {
+    message: 'Telefone deve ter pelo menos 8 digitos',
+  });
+
 const registerCustomerSchema = z.object({
   slug: z.string(),
   name: z.string().min(2),
   email: z.string().email(),
-  phone: z.string().optional(),
+  phone: registerPhoneSchema,
+  birthDate: optionalDateYmd,
   password: z.string().min(6),
   confirmPassword: z.string(),
 }).refine((data) => data.password === data.confirmPassword, {
@@ -172,7 +187,7 @@ const getAvailableSlots = async (req: Request, res: Response) => {
 
     const service = await serviceRepository.findByTenantAndId(tenant.id, query.serviceId);
     const professional = await professionalRepository.findByTenantAndId(tenant.id, query.professionalId);
-    if (!service || !professional) {
+    if (!service || !professional || !professional.isActive) {
       return res.status(404).json({ error: 'Service or professional not found' });
     }
 
@@ -334,6 +349,9 @@ const createPublicAppointment = async (req: Request, res: Response) => {
     if (!professional || !service) {
       return res.status(404).json({ error: 'Service or professional not found' });
     }
+    if (!professional.isActive) {
+      return res.status(400).json({ error: 'Professional is not available for public booking' });
+    }
 
     let customer = null;
     if (data.customerId) {
@@ -423,8 +441,9 @@ const registerCustomer = async (req: Request, res: Response) => {
 
       customer = await customerRepository.update(existingCustomer.id, {
         name: data.name,
-        phone: data.phone || existingCustomer.phone,
+        phone: data.phone,
         passwordHash: hashedPassword,
+        birthDate: data.birthDate ?? existingCustomer.birthDate ?? undefined,
       });
     } else {
       customer = await customerRepository.create({
@@ -432,6 +451,7 @@ const registerCustomer = async (req: Request, res: Response) => {
         name: data.name,
         email: data.email,
         phone: data.phone,
+        birthDate: data.birthDate,
         passwordHash: hashedPassword,
       });
     }
@@ -445,6 +465,7 @@ const registerCustomer = async (req: Request, res: Response) => {
         name: customer.name,
         email: customer.email,
         phone: customer.phone,
+        birthDate: customer.birthDate ?? null,
       },
     });
   } catch (error) {

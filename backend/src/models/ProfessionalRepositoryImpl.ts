@@ -41,7 +41,8 @@ export class ProfessionalRepositoryImpl implements ProfessionalRepository {
     const query = `
       SELECT id, tenant_id as "tenantId", name, phone, commission_rate as "commissionRate",
              buffer_minutes as "bufferMinutes", working_hours as "workingHours", is_active as "isActive", created_at as "createdAt"
-      FROM professionals WHERE tenant_id = $1 AND is_active = true
+      FROM professionals WHERE tenant_id = $1
+      ORDER BY name ASC
     `;
     const result = await this.pool.query(query, [tenantId]);
     return result.rows;

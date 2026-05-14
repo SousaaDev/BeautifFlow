@@ -7,15 +7,16 @@ export class CustomerRepositoryImpl implements CustomerRepository {
 
   async create(customer: Omit<Customer, 'id' | 'createdAt'>): Promise<Customer> {
     const query = `
-      INSERT INTO customers (tenant_id, name, phone, email, password_hash, tags, last_visit)
-      VALUES ($1, $2, $3, $4, $5, $6, $7)
-      RETURNING id, tenant_id, name, phone, email, password_hash, tags, last_visit, created_at, deleted_at
+      INSERT INTO customers (tenant_id, name, phone, email, birth_date, password_hash, tags, last_visit)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      RETURNING id, tenant_id, name, phone, email, birth_date, password_hash, tags, last_visit, created_at, deleted_at
     `;
     const values = [
       customer.tenantId,
       customer.name,
       customer.phone || null,
       customer.email || null,
+      customer.birthDate || null,
       customer.passwordHash || null,
       customer.tags || null,
       customer.lastVisit || null,
@@ -98,6 +99,10 @@ export class CustomerRepositoryImpl implements CustomerRepository {
       values.push(customer.email);
       fields.push(`email = $${values.length}`);
     }
+    if (customer.birthDate !== undefined) {
+      values.push(customer.birthDate);
+      fields.push(`birth_date = $${values.length}`);
+    }
     if (customer.passwordHash !== undefined) {
       values.push(customer.passwordHash);
       fields.push(`password_hash = $${values.length}`);
@@ -119,7 +124,7 @@ export class CustomerRepositoryImpl implements CustomerRepository {
       UPDATE customers
       SET ${fields.join(', ')}
       WHERE id = $${values.length + 1}
-      RETURNING id, tenant_id, name, phone, email, password_hash, tags, last_visit, created_at, deleted_at
+      RETURNING id, tenant_id, name, phone, email, birth_date, password_hash, tags, last_visit, created_at, deleted_at
     `;
     values.push(id);
 
@@ -153,12 +158,18 @@ export class CustomerRepositoryImpl implements CustomerRepository {
   }
 
   private mapRowToCustomer(row: any): Customer {
+    const rawBirth = row.birth_date;
+    let birthDate: string | undefined;
+    if (rawBirth) {
+      birthDate = String(rawBirth).split('T')[0].split(' ')[0];
+    }
     return {
       id: row.id,
       tenantId: row.tenant_id,
       name: row.name,
       phone: row.phone,
       email: row.email,
+      birthDate,
       passwordHash: row.password_hash || undefined,
       tags: row.tags,
       lastVisit: row.last_visit,

@@ -1,10 +1,10 @@
 'use client'
 
-import { useState } from 'react'
+import { Suspense, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { useParams, useRouter } from 'next/navigation'
+import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import { toast } from 'sonner'
 import { Loader2 } from 'lucide-react'
 
@@ -12,11 +12,21 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { publicApi } from '@/lib/api/public'
+import { publicCustomerChangedEvent } from '@/lib/bookingDraft'
 
 const registerSchema = z.object({
   name: z.string().min(2, 'Nome deve ter pelo menos 2 caracteres'),
   email: z.string().email('Email invalido'),
-  phone: z.string().optional(),
+  phone: z
+    .string()
+    .transform((v) => v.trim())
+    .refine((v) => v.replace(/\D/g, '').length >= 8, {
+      message: 'Telefone deve ter pelo menos 8 digitos',
+    }),
+  birthDate: z
+    .string()
+    .optional()
+    .refine((s) => !s || /^\d{4}-\d{2}-\d{2}$/.test(s), 'Data invalida'),
   password: z.string().min(6, 'Senha deve ter pelo menos 6 caracteres'),
   confirmPassword: z.string(),
 }).refine((data) => data.password === data.confirmPassword, {
@@ -35,8 +45,19 @@ type PublicCustomer = {
 }
 
 export default function PublicCustomerRegisterPage() {
+  return (
+    <Suspense
+      fallback={<div className="max-w-md mx-auto py-12 text-center text-muted-foreground">Carregando…</div>}
+    >
+      <PublicCustomerRegisterInner />
+    </Suspense>
+  )
+}
+
+function PublicCustomerRegisterInner() {
   const params = useParams()
   const router = useRouter()
+  const searchParams = useSearchParams()
   const slug = params.slug as string
   const [isLoading, setIsLoading] = useState(false)
 
@@ -56,6 +77,7 @@ export default function PublicCustomerRegisterPage() {
         name: data.name,
         email: data.email,
         phone: data.phone,
+        birthDate: data.birthDate?.trim() || undefined,
         password: data.password,
         confirmPassword: data.confirmPassword,
       })
@@ -69,8 +91,10 @@ export default function PublicCustomerRegisterPage() {
       }
 
       window.localStorage.setItem('beautyflow_public_customer', JSON.stringify(customer))
+      window.dispatchEvent(new Event(publicCustomerChangedEvent))
       toast.success('Conta criada com sucesso')
-      router.push(`/agendar/${slug}`)
+      const next = searchParams.get('next')
+      router.push(next === 'confirm' ? `/agendar/${slug}?resume=1` : `/agendar/${slug}`)
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Erro ao criar conta'
       toast.error(message)
@@ -106,8 +130,22 @@ export default function PublicCustomerRegisterPage() {
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="phone">Telefone</Label>
-          <Input id="phone" {...register('phone')} disabled={isLoading} />
+          <Label htmlFor="phone">Telefone *</Label>
+          <Input id="phone" type="tel" {...register('phone')} disabled={isLoading} />
+          {errors.phone && (
+            <p className="text-sm text-destructive">{errors.phone.message}</p>
+          )}
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="birthDate">Data de nascimento (opcional)</Label>
+          <Input id="birthDate" type="date" {...register('birthDate')} disabled={isLoading} />
+          <p className="text-xs text-muted-foreground">
+            Usamos para lembrar seu aniversario; na agenda do salao aparece so dia e mes.
+          </p>
+          {errors.birthDate && (
+            <p className="text-sm text-destructive">{errors.birthDate.message}</p>
+          )}
         </div>
 
         <div className="space-y-2">
@@ -137,7 +175,11 @@ export default function PublicCustomerRegisterPage() {
         <button
           type="button"
           className="font-medium text-primary hover:underline"
-          onClick={() => router.push(`/agendar/${slug}/login`)}
+          onClick={() =>
+            router.push(
+              `/agendar/${slug}/login${searchParams.toString() ? `?${searchParams.toString()}` : ''}`
+            )
+          }
         >
           Fazer login
         </button>

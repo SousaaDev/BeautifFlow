@@ -14,6 +14,7 @@ interface PublicCustomerAuthResponse {
     name: string
     email: string
     phone?: string | null
+    birthDate?: string | null
   }
 }
 
@@ -31,7 +32,8 @@ export const publicApi = {
     slug: string
     name: string
     email: string
-    phone?: string
+    phone: string
+    birthDate?: string
     password: string
     confirmPassword: string
   }) => api.post<PublicCustomerAuthResponse>(`/api/public/customers/register`, data, { skipAuth: true }),

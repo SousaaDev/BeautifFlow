@@ -179,7 +179,7 @@ export default function AppointmentsPage() {
         customersApi.list(tenant.id),
         servicesApi.list(tenant.id),
       ])
-      setProfessionals(profs.filter((p) => p.isActive))
+      setProfessionals(profs)
       setCustomers(custs)
       setServices(servs.filter((s) => s.isActive))
     } catch (error) {
@@ -629,6 +629,7 @@ export default function AppointmentsPage() {
                       {professionals.map((p) => (
                         <SelectItem key={p.id} value={p.id}>
                           {p.name}
+                          {!p.isActive ? ' (nao aparece online)' : ''}
                         </SelectItem>
                       ))}
                     </SelectContent>
