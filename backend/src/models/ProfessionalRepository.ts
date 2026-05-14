@@ -7,4 +7,7 @@ export interface ProfessionalRepository {
   update(id: string, data: Partial<Professional>): Promise<Professional>;
   delete(id: string): Promise<void>;
   findByTenantAndId(tenantId: string, id: string): Promise<Professional | null>;
+  professionalOffersService(tenantId: string, professionalId: string, serviceId: string): Promise<boolean>;
+  setProfessionalServices(tenantId: string, professionalId: string, serviceIds: string[]): Promise<void>;
+  seedAllActiveServicesForProfessional(tenantId: string, professionalId: string): Promise<void>;
 }

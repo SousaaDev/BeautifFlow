@@ -215,6 +215,15 @@ export const store = async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'Professional not found' });
     }
 
+    const offersService = await profRepository.professionalOffersService(
+      tenantId,
+      data.professionalId,
+      data.serviceId
+    );
+    if (!offersService) {
+      return res.status(400).json({ error: 'Este profissional nao realiza este servico.' });
+    }
+
     // Get tenant for buffer_minutes configuration
     const tenant = await tenantRepository.findById(tenantId);
     if (!tenant) {
@@ -410,6 +419,17 @@ export const update = async (req: Request, res: Response) => {
           updateData.priceCharged = service.price;
         }
       }
+    }
+
+    const nextProfessionalId = data.professionalId ?? existing.professionalId;
+    const nextServiceId = data.serviceId ?? existing.serviceId;
+    const offersService = await profRepository.professionalOffersService(
+      tenantId,
+      nextProfessionalId,
+      nextServiceId
+    );
+    if (!offersService) {
+      return res.status(400).json({ error: 'Este profissional nao realiza este servico.' });
     }
 
     const updated = await appointmentRepository.update(id, updateData);

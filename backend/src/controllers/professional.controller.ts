@@ -13,6 +13,10 @@ const createProfessionalSchema = z.object({
 
 const updateProfessionalSchema = createProfessionalSchema.partial();
 
+const updateProfessionalServicesSchema = z.object({
+  serviceIds: z.array(z.string().uuid()),
+});
+
 const profRepository = new ProfessionalRepositoryImpl(pool);
 
 export const store = async (req: Request, res: Response) => {
@@ -32,7 +36,9 @@ export const store = async (req: Request, res: Response) => {
       workingHours: {},
       isActive: data.isActive ?? true,
     });
-    res.status(201).json(professional);
+    await profRepository.seedAllActiveServicesForProfessional(tenantId, professional.id);
+    const full = await profRepository.findByTenantAndId(tenantId, professional.id);
+    res.status(201).json(full ?? professional);
   } catch (error) {
     if (error instanceof z.ZodError) {
       return res.status(400).json({ error: error.errors });
@@ -88,6 +94,31 @@ export const update = async (req: Request, res: Response) => {
       return res.status(400).json({ error: error.errors });
     }
     res.status(500).json({ error: 'Failed to update professional' });
+  }
+};
+
+export const updateServices = async (req: Request, res: Response) => {
+  try {
+    const { id, tenantId } = req.params;
+    const { serviceIds } = updateProfessionalServicesSchema.parse(req.body);
+
+    const existing = await profRepository.findByTenantAndId(tenantId, id);
+    if (!existing) {
+      return res.status(404).json({ error: 'Professional not found' });
+    }
+
+    await profRepository.setProfessionalServices(tenantId, id, serviceIds);
+    const full = await profRepository.findByTenantAndId(tenantId, id);
+    res.json(full ?? existing);
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: error.errors });
+    }
+    if (error instanceof Error && error.message.includes('invalid')) {
+      return res.status(400).json({ error: error.message });
+    }
+    console.error('Error updating professional services:', error);
+    res.status(500).json({ error: 'Failed to update professional services' });
   }
 };
 

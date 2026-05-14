@@ -14,6 +14,9 @@ export const professionalsApi = {
   update: (tenantId: string, id: string, data: Partial<ProfessionalFormData>) =>
     api.put<Professional>(`/api/tenants/${tenantId}/professionals/${id}`, data),
 
+  updateServices: (tenantId: string, id: string, body: { serviceIds: string[] }) =>
+    api.put<Professional>(`/api/tenants/${tenantId}/professionals/${id}/services`, body),
+
   delete: (tenantId: string, id: string) =>
     api.delete(`/api/tenants/${tenantId}/professionals/${id}`),
 }

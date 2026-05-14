@@ -191,6 +191,15 @@ const getAvailableSlots = async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'Service or professional not found' });
     }
 
+    const offersService = await professionalRepository.professionalOffersService(
+      tenant.id,
+      query.professionalId,
+      query.serviceId
+    );
+    if (!offersService) {
+      return res.status(400).json({ error: 'Este profissional nao realiza este servico.' });
+    }
+
     const selectedDate = parseDateOnly(query.date);
     const workingHours = await getTenantBusinessHoursForDate(tenant.id, selectedDate);
     if (!workingHours) {
@@ -351,6 +360,15 @@ const createPublicAppointment = async (req: Request, res: Response) => {
     }
     if (!professional.isActive) {
       return res.status(400).json({ error: 'Professional is not available for public booking' });
+    }
+
+    const offersService = await professionalRepository.professionalOffersService(
+      tenant.id,
+      professional.id,
+      service.id
+    );
+    if (!offersService) {
+      return res.status(400).json({ error: 'Este profissional nao realiza este servico.' });
     }
 
     let customer = null;
