@@ -8,6 +8,7 @@ import { toast } from 'sonner'
 import { Users, MoreHorizontal, Pencil, Trash2, Loader2 } from 'lucide-react'
 
 import { Badge } from '@/components/ui/badge'
+import { useAuth } from '@/contexts/auth-context'
 import { professionalsApi } from '@/lib/api/professionals'
 import type { Professional } from '@/lib/types'
 
