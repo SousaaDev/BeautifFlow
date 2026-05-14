@@ -137,8 +137,8 @@ export const validateAppointmentConflicts = async (
     }
   }
 
-  // 4. Check buffer time conflicts (including preparation/cleanup time)
-  const bufferMs = bufferMinutes * 60 * 1000;
+  // 4. Check buffer time conflicts (spacing between bookings comes from tenant buffer_minutes only)
+  const bufferMs = Math.max(0, Number(bufferMinutes ?? 0)) * 60 * 1000;
   const checkStart = new Date(startTime.getTime() - bufferMs);
   const checkEnd = new Date(endTime.getTime() + bufferMs);
 
@@ -152,7 +152,7 @@ export const validateAppointmentConflicts = async (
 
   if (appointmentConflicts.length > 0) {
     conflicts.push(...appointmentConflicts);
-    errors.push(`Time slot conflicts with ${appointmentConflicts.length} existing appointment(s) (including ${bufferMinutes}min buffer)`);
+    errors.push(`Time slot conflicts with ${appointmentConflicts.length} existing appointment(s) (including ${Number(bufferMinutes ?? 0)}min buffer)`);
   }
 
   // 5. Check if customer has overlapping appointments
@@ -168,31 +168,6 @@ export const validateAppointmentConflicts = async (
   if (overlappingCustomerAppointments.length > 0) {
     conflicts.push(...overlappingCustomerAppointments);
     errors.push('Customer has overlapping appointments');
-  }
-
-  // 6. Check for appointments too close together (minimum 15min gap without buffer)
-  const professionalAppointments = await appointmentRepository.findByProfessional(tenantId, professionalId);
-  const sameDayAppointments = professionalAppointments.filter(apt => {
-    const aptDate = new Date(apt.startTime);
-    return aptDate.toDateString() === startTime.toDateString();
-  });
-
-  const minGapMs = 15 * 60 * 1000; // 15 minutes minimum gap
-  for (const apt of sameDayAppointments) {
-    if (excludeAppointmentId && apt.id === excludeAppointmentId) continue;
-
-    const aptStart = new Date(apt.startTime);
-    const aptEnd = new Date(apt.endTime);
-
-    // Check if appointment is too close before or after
-    const timeDiffBefore = Math.abs(startTime.getTime() - aptEnd.getTime());
-    const timeDiffAfter = Math.abs(endTime.getTime() - aptStart.getTime());
-
-    if (timeDiffBefore < minGapMs || timeDiffAfter < minGapMs) {
-      conflicts.push(apt);
-      errors.push('Appointments must have at least 15 minutes gap between them');
-      break;
-    }
   }
 
   return {
@@ -255,7 +230,7 @@ export const store = async (req: Request, res: Response) => {
       startTime,
       endTime,
       service.durationMinutes,
-      tenant.bufferMinutes
+      tenant.bufferMinutes ?? 0
     );
 
     if (!validation.isValid) {

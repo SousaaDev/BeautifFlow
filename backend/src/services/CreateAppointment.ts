@@ -39,7 +39,7 @@ export class CreateAppointment {
     }
 
     // Validação 3: Verificar conflito com buffer time (use tenant's buffer configuration)
-    const bufferMs = tenant.bufferMinutes * 60 * 1000;
+    const bufferMs = Math.max(0, Number(tenant.bufferMinutes ?? 0)) * 60 * 1000;
     const adjustedStart = new Date(data.startTime.getTime() - bufferMs);
     const adjustedEnd = new Date(data.endTime.getTime() + bufferMs);
 
