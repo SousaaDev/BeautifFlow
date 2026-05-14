@@ -1,6 +1,7 @@
 import Cookies from 'js-cookie'
 
 const rawApiBaseUrl = process.env.NEXT_PUBLIC_API_URL
+/** Base da API. Em produção, se ficar vazio, o fetch usa URL relativa (/api/...) e o Next encaminha via `rewrites` em next.config.mjs (BACKEND_URL / NEXT_PUBLIC_API_URL). */
 const API_BASE_URL = rawApiBaseUrl
   ? rawApiBaseUrl.replace(/\/+$/, '')
   : process.env.NODE_ENV === 'development'
