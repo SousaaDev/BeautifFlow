@@ -331,7 +331,7 @@ const createPublicAppointment = async (req: Request, res: Response) => {
       startTime,
       endTime,
       service.durationMinutes,
-      tenant.bufferMinutes
+      tenant.bufferMinutes ?? 0
     );
 
     if (!validation.isValid) {

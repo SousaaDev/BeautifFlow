@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -21,6 +21,7 @@ import { ptBR } from 'date-fns/locale'
 
 import { publicApi } from '@/lib/api/public'
 import { appointmentsApi } from '@/lib/api/appointments'
+import { ApiError } from '@/lib/api/client'
 import type { Professional, Service, Tenant } from '@/lib/types'
 
 import { Button } from '@/components/ui/button'
@@ -119,46 +120,62 @@ export default function PublicBookingPage() {
     }
   }, [reset])
 
-  useEffect(() => {
-    const loadAvailableSlots = async () => {
-      if (!selectedService || !selectedProfessional || !selectedDate) return
+  const fetchAvailableSlots = useCallback(async (): Promise<string[]> => {
+    if (!selectedService || !selectedProfessional || !selectedDate) return []
 
-      setIsLoadingSlots(true)
-      try {
-        const dateStr = format(selectedDate, 'yyyy-MM-dd')
-        const slots = await appointmentsApi.getAvailableSlots(
-          slug,
-          selectedService.id,
-          selectedProfessional.id,
-          dateStr
-        )
-        
-        // Filtrar horários que já passaram ou que não têm tempo suficiente
-        const now = new Date()
-        const serviceDurationMs = (selectedService.duration || 0) * 60 * 1000
-        
-        const filteredSlots = slots.filter((time) => {
-          const [hours, minutes] = time.split(':').map(Number)
-          const slotDateTime = new Date(selectedDate)
-          slotDateTime.setHours(hours, minutes, 0, 0)
-          
-          // Calcular quando o slot terminaria
-          const slotEndDateTime = new Date(slotDateTime.getTime() + serviceDurationMs)
-          
-          // Remover horários que já passaram ou que não podem ser completados
-          return slotEndDateTime > now
-        })
-        
-        setAvailableSlots(filteredSlots)
-      } catch (error) {
-        setAvailableSlots([])
-      } finally {
-        setIsLoadingSlots(false)
-      }
-    }
+    const dateStr = format(selectedDate, 'yyyy-MM-dd')
+    const slots = await appointmentsApi.getAvailableSlots(
+      slug,
+      selectedService.id,
+      selectedProfessional.id,
+      dateStr
+    )
 
-    loadAvailableSlots()
+    const now = new Date()
+    const serviceDurationMs = (selectedService.duration || 0) * 60 * 1000
+
+    return slots.filter((time) => {
+      const [hours, minutes] = time.split(':').map(Number)
+      const slotDateTime = new Date(selectedDate)
+      slotDateTime.setHours(hours, minutes, 0, 0)
+
+      const slotEndDateTime = new Date(slotDateTime.getTime() + serviceDurationMs)
+
+      return slotEndDateTime > now
+    })
   }, [slug, selectedService, selectedProfessional, selectedDate])
+
+  useEffect(() => {
+    if (!selectedService || !selectedProfessional || !selectedDate) return
+
+    let cancelled = false
+    setIsLoadingSlots(true)
+    fetchAvailableSlots()
+      .then((filteredSlots) => {
+        if (!cancelled) setAvailableSlots(filteredSlots)
+      })
+      .catch(() => {
+        if (!cancelled) setAvailableSlots([])
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoadingSlots(false)
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [fetchAvailableSlots, selectedService, selectedProfessional, selectedDate])
+
+  useEffect(() => {
+    if (step !== 'datetime') return
+    const refresh = () => {
+      if (document.visibilityState !== 'visible') return
+      if (!selectedService || !selectedProfessional || !selectedDate) return
+      fetchAvailableSlots().then(setAvailableSlots).catch(() => {})
+    }
+    document.addEventListener('visibilitychange', refresh)
+    return () => document.removeEventListener('visibilitychange', refresh)
+  }, [step, fetchAvailableSlots, selectedService, selectedProfessional, selectedDate])
 
   const onSubmit = async (data: BookingFormData) => {
     if (!selectedService || !selectedProfessional || !selectedDate || !selectedTime) return
@@ -181,6 +198,16 @@ export default function PublicBookingPage() {
 
       setStep('success')
     } catch (error) {
+      if (error instanceof ApiError && error.status === 409) {
+        const slots = await fetchAvailableSlots()
+        setAvailableSlots(slots)
+        setSelectedTime(null)
+        setStep('datetime')
+        toast.error(
+          'Esse horário não está mais disponível. Atualizamos a lista — escolha outro horário.'
+        )
+        return
+      }
       const message = error instanceof Error ? error.message : 'Erro ao agendar'
       toast.error(message)
     } finally {
@@ -511,7 +538,27 @@ export default function PublicBookingPage() {
 
           {selectedDate && selectedTime && (
             <div className="flex justify-end">
-              <Button onClick={() => setStep('info')} className="gap-2">
+              <Button
+                className="gap-2"
+                disabled={isLoadingSlots}
+                onClick={async () => {
+                  setIsLoadingSlots(true)
+                  try {
+                    const slots = await fetchAvailableSlots()
+                    setAvailableSlots(slots)
+                    if (!selectedTime || !slots.includes(selectedTime)) {
+                      setSelectedTime(null)
+                      toast.error(
+                        'Esse horário não está mais disponível. Escolha outro na lista atualizada.'
+                      )
+                      return
+                    }
+                    setStep('info')
+                  } finally {
+                    setIsLoadingSlots(false)
+                  }
+                }}
+              >
                 Continuar
                 <ArrowRight className="w-4 h-4" />
               </Button>
