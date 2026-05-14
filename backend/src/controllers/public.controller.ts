@@ -187,6 +187,7 @@ const getAvailableSlots = async (req: Request, res: Response) => {
       workStart: workStart.toLocaleString(),
       workEnd: workEnd.toLocaleString(),
       durationMinutes: service.durationMinutes,
+      bufferMinutes: tenant.bufferMinutes ?? 10,
     });
 
     const appointments = await appointmentRepository.findByProfessional(tenant.id, professional.id);
@@ -206,13 +207,30 @@ const getAvailableSlots = async (req: Request, res: Response) => {
 
     const now = new Date();
     const durationMs = Math.max(0, Number(service.durationMinutes ?? 0)) * 60 * 1000;
-    // Use tenant's buffer_minutes (configured by owner), not professional's
-    const bufferMs = Math.max(0, Number(tenant.bufferMinutes ?? 10)) * 60 * 1000;
+    // Descanso entre atendimentos (beauty_shops.buffer_minutes), definido pela dona
+    const bufferMinutesInt = Math.max(0, Math.floor(Number(tenant.bufferMinutes ?? 10)));
+    const bufferMs = bufferMinutesInt * 60 * 1000;
+
+    const tenantServices = await serviceRepository.findByTenant(tenant.id);
+    const positiveDurations = tenantServices
+      .map((s) => Number(s.durationMinutes ?? 0))
+      .filter((d) => d > 0);
+    const minServiceMinutes =
+      positiveDurations.length > 0
+        ? Math.min(...positiveDurations)
+        : Math.max(1, Number(service.durationMinutes ?? 1));
+    // Passo da grade = menor serviço ativo + descanso (ex.: 10 min + 10 min de buffer => 08:00, 08:20, 08:40…)
+    const slotStepMinutes = Math.max(1, Math.floor(minServiceMinutes) + bufferMinutesInt);
 
     const availableSlots: string[] = [];
     let slotCount = 0;
-    // Permite slots que COMEÇAM até workEnd (mesmo que terminem depois)
-    for (let current = new Date(workStart); current.getTime() <= workEnd.getTime(); current = addMinutes(current, 30)) {
+    // Conflitos bloqueiam [início − buffer, fim + buffer]; após um agendamento os horários livres
+    // recalculam com o mesmo passo (menor serviço + descanso).
+    for (
+      let current = new Date(workStart);
+      current.getTime() <= workEnd.getTime();
+      current = addMinutes(current, slotStepMinutes)
+    ) {
       const slotStart = new Date(current);
       const slotEnd = new Date(slotStart.getTime() + durationMs);
 
@@ -242,6 +260,7 @@ const getAvailableSlots = async (req: Request, res: Response) => {
     }
 
     console.log('✅ Slots gerados:', {
+      slotStepMinutes,
       totalSlots: slotCount,
       slots: availableSlots,
     });
