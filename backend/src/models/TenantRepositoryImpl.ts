@@ -17,7 +17,7 @@ export class TenantRepositoryImpl implements TenantRepository {
       tenant.name,
       tenant.trialEndsAt,
       JSON.stringify(tenant.businessHours ?? {}),
-      tenant.bufferMinutes || 10,
+      tenant.bufferMinutes ?? 10,
       JSON.stringify(tenant.settings || {}),
     ];
     const result = await this.pool.query(query, values);
@@ -107,7 +107,7 @@ export class TenantRepositoryImpl implements TenantRepository {
       name: row.name,
       trialEndsAt: row.trial_ends_at,
       businessHours: normalizeStoredBusinessHours(row.business_hours),
-      bufferMinutes: row.buffer_minutes || 10,
+      bufferMinutes: row.buffer_minutes ?? 10,
       settings: coerceSettingsRecord(row.settings),
       createdAt: row.created_at,
     };
