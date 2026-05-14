@@ -82,7 +82,7 @@ export default function SettingsPage() {
 
     setCompanyName(tenant.name)
     setCompanySlug(tenant.slug)
-    setBufferMinutes(tenant.bufferMinutes || 10)
+    setBufferMinutes(tenant.bufferMinutes ?? 10)
 
     setWeeklySchedule(scheduleFromTenant(tenant.businessHours))
   }, [tenant])

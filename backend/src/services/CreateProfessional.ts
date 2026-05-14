@@ -24,7 +24,7 @@ export class CreateProfessional {
       name: data.name,
       phone: data.phone,
       commissionRate: data.commissionRate,
-      bufferMinutes: data.bufferMinutes || 10,
+      bufferMinutes: data.bufferMinutes ?? 10,
       isActive: true,
     });
   }
