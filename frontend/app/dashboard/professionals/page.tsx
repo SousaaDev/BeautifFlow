@@ -7,7 +7,7 @@ import { z } from 'zod'
 import { toast } from 'sonner'
 import { Users, MoreHorizontal, Pencil, Trash2, Loader2 } from 'lucide-react'
 
-import { useAuth } from '@/contexts/auth-context'
+import { Badge } from '@/components/ui/badge'
 import { professionalsApi } from '@/lib/api/professionals'
 import type { Professional } from '@/lib/types'
 
@@ -166,6 +166,15 @@ export default function ProfessionalsPage() {
       ),
     },
     {
+      key: 'booking',
+      header: 'Agendamento online',
+      render: (p: Professional) => (
+        <Badge variant={p.isActive ? 'default' : 'secondary'}>
+          {p.isActive ? 'Visivel' : 'Oculto'}
+        </Badge>
+      ),
+    },
+    {
       key: 'actions',
       header: '',
       className: 'w-12',
@@ -224,7 +233,7 @@ export default function ProfessionalsPage() {
             </DialogTitle>
             <DialogDescription>
               {selectedProfessional
-                ? 'Atualize o nome e se o profissional está ativo para agendamentos.'
+                ? 'Atualize o nome e se o profissional aparece na pagina publica de agendamento. Inativos continuam listados aqui no painel.'
                 : 'Adicione um profissional. Horários do salão ficam em Configurações.'}
             </DialogDescription>
           </DialogHeader>
@@ -243,7 +252,9 @@ export default function ProfessionalsPage() {
                 <Label htmlFor="is-active" className="text-sm font-medium">
                   Ativo para agendamento
                 </Label>
-                <p className="text-xs text-muted-foreground">Aparece na página pública de agendamento</p>
+                <p className="text-xs text-muted-foreground">
+                  Quando desligado, some da pagina publica; continua visivel nesta lista.
+                </p>
               </div>
               <Switch
                 id="is-active"

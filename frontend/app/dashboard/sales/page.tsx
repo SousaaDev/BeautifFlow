@@ -137,7 +137,7 @@ export default function SalesPage() {
       ])
       setSales(salesData)
       setCustomers(custsData)
-      setProfessionals(profsData.filter((p) => p.isActive))
+      setProfessionals(profsData)
       setServices(servsData.filter((s) => s.isActive))
       setProducts(prodsData.filter((p) => p.isActive && p.currentStock > 0))
     } catch (error) {

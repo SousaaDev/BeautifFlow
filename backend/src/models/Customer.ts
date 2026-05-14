@@ -4,6 +4,8 @@ export interface Customer {
   name: string;
   phone?: string;
   email?: string;
+  /** Data completa (YYYY-MM-DD); na UI do salão exibir só dia/mês como aniversário */
+  birthDate?: string | null;
   passwordHash?: string;
   tags?: string[];
   lastVisit?: Date;

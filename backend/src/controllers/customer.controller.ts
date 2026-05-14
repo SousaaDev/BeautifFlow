@@ -7,18 +7,49 @@ import { CreateCustomer } from '../services/CreateCustomer';
 const customerRepository = new CustomerRepositoryImpl(pool);
 const createCustomerUseCase = new CreateCustomer(customerRepository);
 
+const phoneDigits = (v: string) => v.replace(/\D/g, '');
+
+const phoneSchema = z
+  .string()
+  .transform((v) => v.trim())
+  .refine((v) => phoneDigits(v).length >= 8, {
+    message: 'Telefone deve ter pelo menos 8 digitos',
+  });
+
+const optionalPhoneUpdate = phoneSchema.optional();
+
+const optionalBirthDate = z
+  .union([z.string().regex(/^\d{4}-\d{2}-\d{2}$/), z.literal(''), z.null()])
+  .optional()
+  .transform((v) => (v === '' || v === null || v === undefined ? undefined : v));
+
 const createCustomerSchema = z.object({
-  name: z.string(),
-  phone: z.string().optional(),
-  email: z.string().email().optional(),
+  name: z.string().min(2),
+  phone: phoneSchema,
+  email: z.preprocess(
+    (v) => (typeof v === 'string' && v.trim() === '' ? undefined : v),
+    z.string().email().optional()
+  ),
+  birthDate: optionalBirthDate,
   tags: z.array(z.string()).optional(),
   lastVisit: z.string().optional(),
 });
 
 const updateCustomerSchema = z.object({
-  name: z.string().optional(),
-  phone: z.string().optional(),
-  email: z.string().email().optional(),
+  name: z.string().min(2).optional(),
+  phone: optionalPhoneUpdate,
+  email: z.preprocess(
+    (v) => (typeof v === 'string' && v.trim() === '' ? undefined : v),
+    z.string().email().optional()
+  ),
+  birthDate: z
+    .union([z.string().regex(/^\d{4}-\d{2}-\d{2}$/), z.literal(''), z.null()])
+    .optional()
+    .transform((v) => {
+      if (v === '') return null;
+      if (v === null) return null;
+      return v;
+    }),
   tags: z.array(z.string()).optional(),
   lastVisit: z.string().optional(),
 });
@@ -36,6 +67,7 @@ export const store = async (req: Request, res: Response) => {
       name: data.name,
       phone: data.phone,
       email: data.email,
+      birthDate: data.birthDate,
       tags: data.tags,
       lastVisit: data.lastVisit ? new Date(data.lastVisit) : undefined,
     });
@@ -85,6 +117,7 @@ export const update = async (req: Request, res: Response) => {
       name: data.name,
       phone: data.phone,
       email: data.email,
+      birthDate: data.birthDate,
       tags: data.tags,
       lastVisit: data.lastVisit ? new Date(data.lastVisit) : undefined,
     });
