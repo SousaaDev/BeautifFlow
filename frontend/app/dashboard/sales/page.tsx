@@ -231,6 +231,19 @@ export default function SalesPage() {
     }
   }
 
+  const getAvailableStock = (productId: string) => {
+    const product = products.find((p) => p.id === productId)
+    return product?.currentStock || 0
+  }
+
+  const validateQuantity = (index: number, quantity: number) => {
+    const itemId = watchItems[index]?.itemId
+    if (!itemId) return true
+    
+    const available = getAvailableStock(itemId)
+    return quantity <= available
+  }
+
   const columns = [
     {
       key: 'createdAt',
@@ -495,11 +508,23 @@ export default function SalesPage() {
 
                   <div className="col-span-2">
                     <Label className="text-xs">Qtd</Label>
-                    <Input
-                      type="number"
-                      min="1"
-                      {...register(`items.${index}.quantity`)}
-                    />
+                    <div>
+                      <Input
+                        type="number"
+                        min="1"
+                        {...register(`items.${index}.quantity`)}
+                      />
+                      {watchItems[index]?.itemId && (
+                        <p className="text-xs mt-1 text-muted-foreground">
+                          Disp: {getAvailableStock(watchItems[index].itemId)}
+                        </p>
+                      )}
+                      {watchItems[index]?.quantity > getAvailableStock(watchItems[index]?.itemId) && (
+                        <p className="text-xs mt-1 text-destructive">
+                          ⚠️ Sem estoque suficiente
+                        </p>
+                      )}
+                    </div>
                   </div>
 
                   <div className="col-span-3">

@@ -46,6 +46,27 @@ export const store = async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Each item must have either productId or serviceId' });
     }
 
+    // Validar estoque dos produtos
+    for (const item of data.items) {
+      if (item.productId) {
+        const productQuery = await pool.query(
+          'SELECT current_stock FROM products WHERE id = $1',
+          [item.productId]
+        );
+        
+        if (productQuery.rows.length === 0) {
+          return res.status(404).json({ error: `Produto não encontrado` });
+        }
+        
+        const currentStock = productQuery.rows[0].current_stock;
+        if (currentStock < item.quantity) {
+          return res.status(400).json({ 
+            error: `Estoque insuficiente. Disponível: ${currentStock}, Solicitado: ${item.quantity}` 
+          });
+        }
+      }
+    }
+
     await client.query('BEGIN');
 
     // Calcular total
