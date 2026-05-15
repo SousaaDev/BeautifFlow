@@ -351,12 +351,12 @@ export default function SettingsPage() {
                   return (
                     <div
                       key={day}
-                      className="flex flex-col gap-3 rounded-lg border border-slate-200 bg-slate-50/80 p-3 sm:flex-row sm:items-center sm:justify-between"
+                      className="flex flex-col gap-4 rounded-lg border border-border bg-card p-4"
                     >
-                      <div className="min-w-[10rem] text-sm font-medium text-foreground">
-                        {WEEKDAY_LABELS_PT[day]}
-                      </div>
-                      <div className="flex flex-1 flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                        <div className="min-w-[10rem] text-sm font-medium text-foreground">
+                          {WEEKDAY_LABELS_PT[day]}
+                        </div>
                         <div className="flex items-center gap-2">
                           <Switch
                             id={`closed-${day}`}
@@ -372,39 +372,39 @@ export default function SettingsPage() {
                             Fechado
                           </Label>
                         </div>
-                        {!row.closed && (
-                          <div className="flex flex-wrap items-center gap-2">
-                            <div className="flex items-center gap-2">
-                              <Label className="text-xs text-muted-foreground whitespace-nowrap">Abre</Label>
-                              <Input
-                                type="time"
-                                value={row.open}
-                                onChange={(e) =>
-                                  setWeeklySchedule((prev) => ({
-                                    ...prev,
-                                    [day]: { ...prev[day], open: e.target.value },
-                                  }))
-                                }
-                                className="w-[7.5rem] text-sm bg-white"
-                              />
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <Label className="text-xs text-muted-foreground whitespace-nowrap">Fecha</Label>
-                              <Input
-                                type="time"
-                                value={row.close}
-                                onChange={(e) =>
-                                  setWeeklySchedule((prev) => ({
-                                    ...prev,
-                                    [day]: { ...prev[day], close: e.target.value },
-                                  }))
-                                }
-                                className="w-[7.5rem] text-sm bg-white"
-                              />
-                            </div>
-                          </div>
-                        )}
                       </div>
+                      {!row.closed && (
+                        <div className="grid grid-cols-2 sm:flex sm:items-center gap-4">
+                          <div className="flex items-center gap-2">
+                            <Label className="text-xs text-muted-foreground whitespace-nowrap">Abre</Label>
+                            <Input
+                              type="time"
+                              value={row.open}
+                              onChange={(e) =>
+                                setWeeklySchedule((prev) => ({
+                                  ...prev,
+                                  [day]: { ...prev[day], open: e.target.value },
+                                }))
+                              }
+                              className="w-full sm:w-[7.5rem] text-sm"
+                            />
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Label className="text-xs text-muted-foreground whitespace-nowrap">Fecha</Label>
+                            <Input
+                              type="time"
+                              value={row.close}
+                              onChange={(e) =>
+                                setWeeklySchedule((prev) => ({
+                                  ...prev,
+                                  [day]: { ...prev[day], close: e.target.value },
+                                }))
+                              }
+                              className="w-full sm:w-[7.5rem] text-sm"
+                            />
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )
                 })}
