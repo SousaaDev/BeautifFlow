@@ -11,8 +11,8 @@ export default function AuthLayout({
       {/* Left side - Branding */}
       <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-rose-100 via-pink-100 to-white p-12 flex-col justify-between text-slate-950 dark:bg-slate-950 dark:text-white dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
         <Link href="/" className="flex items-center gap-3">
-          <div className="flex items-center justify-center w-16 h-16 rounded-3xl overflow-hidden shadow-lg">
-            <Image src="/logo.png" alt="BeautyFlow Logo" width={64} height={64} className="object-contain" />
+          <div className="flex items-center justify-center w-32 h-32 rounded-3xl overflow-hidden shadow-lg">
+            <Image src="/logo.png" alt="BeautyFlow Logo" width={128} height={128} className="object-contain" />
           </div>
         </Link>
 
@@ -49,8 +49,8 @@ export default function AuthLayout({
         <div className="w-full max-w-lg">
           {/* Mobile logo */}
           <Link href="/" className="flex lg:hidden items-center gap-3 mb-8 justify-center">
-            <div className="flex items-center justify-center w-14 h-14 rounded-3xl overflow-hidden shadow-lg shadow-pink-200/70 dark:shadow-fuchsia-500/30">
-              <Image src="/logo.png" alt="BeautyFlow Logo" width={56} height={56} className="object-contain" />
+            <div className="flex items-center justify-center w-24 h-24 rounded-3xl overflow-hidden shadow-lg shadow-pink-200/70 dark:shadow-fuchsia-500/30">
+              <Image src="/logo.png" alt="BeautyFlow Logo" width={96} height={96} className="object-contain" />
             </div>
           </Link>
 
