@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useRouter } from 'next/navigation'
 import { AuthProvider, useAuth } from '@/contexts/auth-context'
 import { Sidebar } from '@/components/layout/sidebar'
 import { TrialBanner } from '@/components/layout/trial-banner'
@@ -11,7 +11,6 @@ import Onboarding from '@/components/onboarding/Onboarding'
 function DashboardContent({ children }: { children: React.ReactNode }) {
   const { isLoading, isAuthenticated, tenant } = useAuth()
   const router = useRouter()
-  const searchParams = useSearchParams()
   const [openOnboarding, setOpenOnboarding] = useState(false)
 
   useEffect(() => {
@@ -26,12 +25,12 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
     if (isLoading) return
     if (!isAuthenticated) return
 
-    const forced = searchParams?.get('onboarding') === 'true'
+    const forced = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('onboarding') === 'true'
     const completed = window.localStorage.getItem('onboardingCompleted') === '1'
     if (forced || !completed) {
       setOpenOnboarding(true)
     }
-  }, [searchParams, isLoading, isAuthenticated])
+  }, [isLoading, isAuthenticated])
 
   if (isLoading) {
     return (
