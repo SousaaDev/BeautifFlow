@@ -93,21 +93,32 @@ export default function Onboarding({ open, onClose }: { open: boolean; onClose: 
                 return (
                   <div key={day} className="flex items-center gap-3">
                     <div className="w-28 text-sm font-medium">{WEEKDAY_LABELS_PT[day]}</div>
-                    <div className="flex items-center gap-2">
-                      <Label className="text-xs">Abre</Label>
-                      <Input
-                        type="time"
-                        value={row.open}
-                        onChange={(e) => setWeeklySchedule((prev) => ({ ...prev, [day]: { ...prev[day], open: e.target.value } }))}
-                        className="w-24"
-                      />
-                      <Label className="text-xs">Fecha</Label>
-                      <Input
-                        type="time"
-                        value={row.close}
-                        onChange={(e) => setWeeklySchedule((prev) => ({ ...prev, [day]: { ...prev[day], close: e.target.value } }))}
-                        className="w-24"
-                      />
+                    <div className="flex items-center gap-4">
+                      <div className="flex items-center gap-2">
+                        <Label className="text-xs">Fechado</Label>
+                        <Switch
+                          checked={row.closed}
+                          onCheckedChange={(v) => setWeeklySchedule((prev) => ({ ...prev, [day]: { ...prev[day], closed: v as boolean } }))}
+                        />
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Label className="text-xs">Abre</Label>
+                        <Input
+                          type="time"
+                          value={row.open}
+                          onChange={(e) => setWeeklySchedule((prev) => ({ ...prev, [day]: { ...prev[day], open: e.target.value } }))}
+                          className="w-24"
+                          disabled={row.closed}
+                        />
+                        <Label className="text-xs">Fecha</Label>
+                        <Input
+                          type="time"
+                          value={row.close}
+                          onChange={(e) => setWeeklySchedule((prev) => ({ ...prev, [day]: { ...prev[day], close: e.target.value } }))}
+                          className="w-24"
+                          disabled={row.closed}
+                        />
+                      </div>
                     </div>
                   </div>
                 )
