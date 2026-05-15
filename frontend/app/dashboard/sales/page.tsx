@@ -472,50 +472,49 @@ export default function SalesPage() {
                     <Controller
                       name={`items.${index}.itemId`}
                       control={control}
-                      render={({ field }) => (
-                        <Select
-                          onValueChange={(v) => {
-                            field.onChange(v)
-                            handleItemChange(index, v)
-                          }}
-                          value={field.value}
-                        >
-                          <SelectTrigger>
-                            {field.value ? (
-                              <span
-                                className={
-                                  products.find((p) => p.id === field.value)?.currentStock <= 0
-                                    ? 'line-through opacity-70'
-                                    : undefined
-                                }
-                              >
-                                {products.find((p) => p.id === field.value)?.name}
-                              </span>
-                            ) : (
-                              <SelectValue placeholder="Selecione" />
-                            )}
-                          </SelectTrigger>
-                          <SelectContent>
-                            {products.length > 0 ? (
-                              products.map((p) => (
-                                <SelectItem
-                                  key={p.id}
-                                  value={p.id}
-                                  disabled={p.currentStock <= 0}
-                                  className={p.currentStock <= 0 ? 'line-through opacity-70' : undefined}
-                                >
-                                  {p.name} - R$ {Number(p.salePrice || 0).toFixed(2)}{' '}
-                                  {p.currentStock <= 0 ? '(Sem estoque)' : `(est: ${p.currentStock})`}
+                      render={({ field }) => {
+                        const selectedProduct = products.find((p) => p.id === field.value)
+                        const isOutOfStock = selectedProduct?.currentStock !== undefined && selectedProduct.currentStock <= 0
+
+                        return (
+                          <Select
+                            onValueChange={(v) => {
+                              field.onChange(v)
+                              handleItemChange(index, v)
+                            }}
+                            value={field.value}
+                          >
+                            <SelectTrigger>
+                              {field.value ? (
+                                <span className={isOutOfStock ? 'line-through opacity-70' : undefined}>
+                                  {selectedProduct?.name}
+                                </span>
+                              ) : (
+                                <SelectValue placeholder="Selecione" />
+                              )}
+                            </SelectTrigger>
+                            <SelectContent>
+                              {products.length > 0 ? (
+                                products.map((p) => (
+                                  <SelectItem
+                                    key={p.id}
+                                    value={p.id}
+                                    disabled={p.currentStock <= 0}
+                                    className={p.currentStock <= 0 ? 'line-through opacity-70' : undefined}
+                                  >
+                                    {p.name} - R$ {Number(p.salePrice || 0).toFixed(2)}{' '}
+                                    {p.currentStock <= 0 ? '(Sem estoque)' : `(est: ${p.currentStock})`}
+                                  </SelectItem>
+                                ))
+                              ) : (
+                                <SelectItem disabled value="none">
+                                  Nenhum produto encontrado
                                 </SelectItem>
-                              ))
-                            ) : (
-                              <SelectItem disabled value="none">
-                                Nenhum produto encontrado
-                              </SelectItem>
-                            )}
-                          </SelectContent>
-                        </Select>
-                      )}
+                              )}
+                            </SelectContent>
+                          </Select>
+                        )
+                      }}
                     />
                   </div>
 
