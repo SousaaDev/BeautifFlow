@@ -54,7 +54,7 @@ export default function AuthLayout({
             </div>
           </Link>
 
-          <div className="rounded-[2rem] border border-slate-200 bg-white p-10 shadow-2xl shadow-slate-200/50 backdrop-blur-xl dark:border-slate-800 dark:bg-slate-900 dark:shadow-black/20">
+          <div className="rounded-[2rem] border border-slate-200 bg-white p-10 backdrop-blur-xl dark:border-slate-800 dark:bg-slate-900">
             {children}
           </div>
         </div>
