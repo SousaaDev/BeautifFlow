@@ -131,7 +131,6 @@ export default function SalesPage() {
       : toNumber(item.unitPrice) * toNumber(item.quantity)
 
   const [openOnLoad, setOpenOnLoad] = useState(false)
-  const [shouldClearQuery, setShouldClearQuery] = useState(false)
 
   useEffect(() => {
     if (tenant?.id) {
@@ -141,24 +140,24 @@ export default function SalesPage() {
 
   useEffect(() => {
     if (searchParams.get('new') === 'true') {
-      setShouldClearQuery(true)
       setOpenOnLoad(true)
     } else if (typeof window !== 'undefined' && window.localStorage.getItem('salesNewPopup') === '1') {
       window.localStorage.removeItem('salesNewPopup')
       setOpenOnLoad(true)
-      setShouldClearQuery(false)
     }
   }, [searchParams])
 
   useEffect(() => {
-    if (openOnLoad) {
-      openCreateDialog()
-      if (shouldClearQuery) {
-        router.replace('/dashboard/sales')
-      }
-      setOpenOnLoad(false)
+    if (!openOnLoad) return
+
+    openCreateDialog()
+
+    if (searchParams.get('new') === 'true') {
+      router.replace('/dashboard/sales')
     }
-  }, [openOnLoad, router, shouldClearQuery])
+
+    setOpenOnLoad(false)
+  }, [openOnLoad, router, searchParams])
 
   const loadData = async () => {
     if (!tenant?.id) return

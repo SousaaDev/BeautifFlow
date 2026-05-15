@@ -382,17 +382,14 @@ export default function DashboardPage() {
               </Link>
             </Button>
             <Button
+              asChild
               variant="outline"
               className="h-auto py-6 flex-col gap-3 rounded-3xl border border-slate-200 bg-slate-50 text-slate-950 shadow-xl shadow-slate-900/10 transition hover:bg-slate-100 focus-visible:ring-ring/50 focus-visible:ring-2 dark:border-slate-700 dark:bg-slate-950/95 dark:text-white dark:shadow-slate-950/30 dark:hover:bg-slate-900"
-              onClick={() => {
-                if (typeof window !== 'undefined') {
-                  window.localStorage.setItem('salesNewPopup', '1')
-                }
-                router.push('/dashboard/sales')
-              }}
             >
-              <DollarSign className="w-6 h-6 text-rose-400" />
-              <span>Registrar venda</span>
+              <Link href="/dashboard/sales?new=true">
+                <DollarSign className="w-6 h-6 text-rose-400" />
+                <span>Registrar venda</span>
+              </Link>
             </Button>
             <Button
               asChild
