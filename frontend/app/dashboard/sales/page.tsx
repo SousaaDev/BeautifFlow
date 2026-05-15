@@ -110,13 +110,12 @@ export default function SalesPage() {
   })
 
   const watchItems = watch('items')
-  const watchDiscount = watch('discount')
 
   const subtotal = watchItems.reduce((acc, item) => {
     return acc + (item.unitPrice || 0) * (item.quantity || 0)
   }, 0)
 
-  const total = Math.max(0, subtotal - (watchDiscount || 0))
+  const total = subtotal
 
   const toNumber = (value: number | string | undefined | null) => Number(value ?? 0)
   const getSaleTotalAmount = (sale: Sale) => toNumber(sale.totalAmount ?? sale.total ?? 0)
@@ -571,15 +570,6 @@ export default function SalesPage() {
                 />
               </div>
 
-              <div className="space-y-2">
-                <Label>Desconto (R$)</Label>
-                <Input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  {...register('discount')}
-                />
-              </div>
             </div>
 
             <div className="space-y-2">
@@ -597,12 +587,6 @@ export default function SalesPage() {
                   <span>Subtotal</span>
                   <span>R$ {subtotal.toFixed(2)}</span>
                 </div>
-                {watchDiscount > 0 && (
-                  <div className="flex justify-between text-sm text-destructive">
-                    <span>Desconto</span>
-                    <span>- R$ {watchDiscount.toFixed(2)}</span>
-                  </div>
-                )}
                 <Separator />
                 <div className="flex justify-between text-lg font-bold">
                   <span>Total</span>
