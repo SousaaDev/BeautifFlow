@@ -9,9 +9,10 @@ import './globals.css'
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' })
 
 export const metadata: Metadata = {
-  title: 'BeautyFlow - Gestao de Saloes de Beleza',
-  description: 'Sistema completo para gestao de saloes de beleza. Agende, gerencie clientes, profissionais e aumente seu faturamento.',
-  keywords: ['salao de beleza', 'gestao', 'agendamento', 'beleza', 'spa'],
+  title: 'BeautyFlow - Gestão de Salões de Beleza',
+  description:
+    'Sistema completo para gestão de salões de beleza. Agende, gerencie clientes, profissionais e aumente seu faturamento.',
+  keywords: ['salão de beleza', 'gestão', 'agendamento', 'beleza', 'spa'],
 }
 
 export const viewport: Viewport = {
