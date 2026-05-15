@@ -97,9 +97,22 @@ export const store = async (req: Request, res: Response) => {
 
     await client.query('COMMIT');
 
+    // Fetch items criados com IDs
+    const createdItems = await saleItemRepository.findBySale(saleId);
+    
+    // Fetch customer and professional details
+    const customerQuery = sale.rows[0].customerId 
+      ? await pool.query('SELECT id, name FROM customers WHERE id = $1', [sale.rows[0].customerId])
+      : null;
+    const professionalQuery = sale.rows[0].professionalId
+      ? await pool.query('SELECT id, name FROM professionals WHERE id = $1', [sale.rows[0].professionalId])
+      : null;
+
     const saleWithItems = {
       ...sale.rows[0],
-      items: data.items,
+      customer: customerQuery?.rows[0] || null,
+      professional: professionalQuery?.rows[0] || null,
+      items: createdItems,
     };
 
     res.status(201).json(saleWithItems);
