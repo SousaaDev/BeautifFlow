@@ -13,6 +13,7 @@ import {
   Loader2,
   DollarSign,
   Eye,
+  AlertTriangle,
 } from 'lucide-react'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
@@ -508,26 +509,27 @@ export default function SalesPage() {
 
                   <div className="col-span-2">
                     <Label className="text-xs">Qtd</Label>
-                    <div>
+                    <div className="space-y-1">
                       <Input
                         type="number"
                         min="1"
                         {...register(`items.${index}.quantity`)}
                       />
-                      {watchItems[index]?.itemId && (
-                        <p className="text-xs mt-1 text-muted-foreground">
-                          Disp: {getAvailableStock(watchItems[index].itemId)}
-                        </p>
-                      )}
-                      {watchItems[index]?.quantity > getAvailableStock(watchItems[index]?.itemId) && (
-                        <p className="text-xs mt-1 text-destructive">
-                          ⚠️ Sem estoque suficiente
-                        </p>
-                      )}
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="text-muted-foreground">
+                          Disp: {getAvailableStock(watchItems[index]?.itemId)}
+                        </span>
+                        {watchItems[index]?.quantity > getAvailableStock(watchItems[index]?.itemId) && (
+                          <span className="inline-flex items-center gap-1 text-destructive">
+                            <AlertTriangle className="w-3 h-3" />
+                            Sem estoque suficiente
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
 
-                  <div className="col-span-3">
+                  <div className="col-span-6 sm:col-span-3">
                     <Label className="text-xs">Preco unit.</Label>
                     <Input
                       type="number"
@@ -535,18 +537,6 @@ export default function SalesPage() {
                       min="0"
                       {...register(`items.${index}.unitPrice`)}
                     />
-                  </div>
-
-                  <div className="col-span-1">
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => fields.length > 1 && remove(index)}
-                      disabled={fields.length === 1}
-                    >
-                      <Trash2 className="w-4 h-4 text-destructive" />
-                    </Button>
                   </div>
                 </div>
               ))}
