@@ -409,7 +409,7 @@ export default function SalesPage() {
                         <SelectValue placeholder="Cliente avulso" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">Cliente avulso</SelectItem>
+                        <SelectItem value="none">Cliente avulso</SelectItem>
                         {customers.map((c) => (
                           <SelectItem key={c.id} value={c.id}>
                             {c.name}
@@ -700,12 +700,12 @@ export default function SalesPage() {
                   <span>Subtotal</span>
                   <span>R$ {getSaleTotalAmount(selectedSale).toFixed(2)}</span>
                 </div>
-                {(selectedSale.discount ?? 0) > 0 && (
-                  <div className="flex justify-between text-sm text-destructive">
-                    <span>Desconto</span>
-                    <span>- R$ {(selectedSale.discount ?? 0).toFixed(2)}</span>
-                  </div>
-                )}
+                {Number(selectedSale.discount ?? 0) > 0 && (
+  <div className="flex justify-between text-sm text-destructive">
+    <span>Desconto</span>
+    <span>- R$ {Number(selectedSale.discount ?? 0).toFixed(2)}</span>
+  </div>
+)}
                 <div className="flex justify-between text-lg font-bold pt-2">
                   <span>Total</span>
                   <span>R$ {getSaleFinalAmount(selectedSale).toFixed(2)}</span>
