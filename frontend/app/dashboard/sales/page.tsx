@@ -118,10 +118,14 @@ export default function SalesPage() {
 
   const total = Math.max(0, subtotal - (watchDiscount || 0))
 
-  const getSaleTotalAmount = (sale: Sale) => sale.totalAmount ?? sale.total ?? 0
-  const getSaleFinalAmount = (sale: Sale) => sale.finalAmount ?? sale.total ?? getSaleTotalAmount(sale)
+  const toNumber = (value: number | string | undefined | null) => Number(value ?? 0)
+  const getSaleTotalAmount = (sale: Sale) => toNumber(sale.totalAmount ?? sale.total ?? 0)
+  const getSaleFinalAmount = (sale: Sale) => toNumber(sale.finalAmount ?? sale.total ?? getSaleTotalAmount(sale))
   const getSalePaymentStatus = (sale: Sale) => sale.paymentStatus ?? 'PAID'
-  const getSaleItemTotalPrice = (item: SaleItem) => item.totalPrice ?? item.unitPrice * item.quantity
+  const getSaleItemTotalPrice = (item: SaleItem) =>
+    item.totalPrice !== undefined && item.totalPrice !== null
+      ? toNumber(item.totalPrice)
+      : toNumber(item.unitPrice) * toNumber(item.quantity)
 
   useEffect(() => {
     if (tenant?.id) {

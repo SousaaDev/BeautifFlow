@@ -26,6 +26,8 @@ import type { Professional, Customer, Appointment, Sale } from '@/lib/types'
 import { format, startOfDay, endOfDay, startOfMonth, endOfMonth } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 
+const parseAmount = (value: number | string | undefined | null) => Number(value ?? 0)
+
 interface DashboardStats {
   totalProfessionals: number
   totalCustomers: number
@@ -68,7 +70,7 @@ export default function DashboardPage() {
         ])
 
         const salesRevenue = sales.reduce(
-          (acc, sale) => acc + (sale.finalAmount ?? sale.total ?? 0),
+          (acc, sale) => acc + parseAmount(sale.finalAmount ?? sale.total ?? 0),
           0
         )
         
@@ -330,7 +332,7 @@ export default function DashboardPage() {
                     </div>
                     <div className="text-right">
                       <p className="font-bold text-foreground">
-                        R$ {(sale.finalAmount ?? sale.total ?? 0).toFixed(2)}
+                        R$ {parseAmount(sale.finalAmount ?? sale.total ?? 0).toFixed(2)}
                       </p>
                       <Badge
                         variant={(sale.paymentStatus ?? 'PAID') === 'PAID' ? 'default' : 'secondary'}

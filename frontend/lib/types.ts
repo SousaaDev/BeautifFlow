@@ -120,7 +120,7 @@ export interface SaleItem {
   serviceId: string | null
   quantity: number
   unitPrice: number
-  totalPrice?: number
+  totalPrice?: number | string
   product?: Product
   service?: Service
 }
@@ -131,10 +131,10 @@ export interface Sale {
   customerId: string | null
   professionalId: string | null
   appointmentId: string | null
-  total: number
-  totalAmount?: number
-  discount?: number
-  finalAmount?: number
+  total: number | string
+  totalAmount?: number | string
+  discount?: number | string
+  finalAmount?: number | string
   paymentMethod: PaymentMethod
   paymentStatus?: PaymentStatus
   notes?: string | null
