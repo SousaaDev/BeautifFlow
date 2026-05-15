@@ -22,7 +22,7 @@ import { customersApi } from '@/lib/api/customers'
 import { professionalsApi } from '@/lib/api/professionals'
 import { servicesApi } from '@/lib/api/services'
 import { productsApi } from '@/lib/api/products'
-import type { Sale, Customer, Professional, Service, Product, PaymentMethod } from '@/lib/types'
+import type { Sale, SaleItem, Customer, Professional, Service, Product, PaymentMethod } from '@/lib/types'
 
 import { DataTable } from '@/components/data-table'
 import { Button } from '@/components/ui/button'
@@ -117,6 +117,11 @@ export default function SalesPage() {
   }, 0)
 
   const total = Math.max(0, subtotal - (watchDiscount || 0))
+
+  const getSaleTotalAmount = (sale: Sale) => sale.totalAmount ?? sale.total ?? 0
+  const getSaleFinalAmount = (sale: Sale) => sale.finalAmount ?? sale.total ?? getSaleTotalAmount(sale)
+  const getSalePaymentStatus = (sale: Sale) => sale.paymentStatus ?? 'PAID'
+  const getSaleItemTotalPrice = (item: SaleItem) => item.totalPrice ?? item.unitPrice * item.quantity
 
   useEffect(() => {
     if (tenant?.id) {
@@ -238,7 +243,7 @@ export default function SalesPage() {
       key: 'finalAmount',
       header: 'Total',
       render: (s: Sale) => (
-        <span className="font-medium">R$ {s.finalAmount.toFixed(2)}</span>
+        <span className="font-medium">R$ {getSaleFinalAmount(s).toFixed(2)}</span>
       ),
     },
     {
@@ -249,14 +254,17 @@ export default function SalesPage() {
     {
       key: 'paymentStatus',
       header: 'Status',
-      render: (s: Sale) => (
-        <Badge variant={s.paymentStatus === 'PAID' ? 'default' : 'secondary'}>
-          {s.paymentStatus === 'PAID' && 'Pago'}
-          {s.paymentStatus === 'PENDING' && 'Pendente'}
-          {s.paymentStatus === 'REFUNDED' && 'Reembolsado'}
-          {s.paymentStatus === 'CANCELED' && 'Cancelado'}
-        </Badge>
-      ),
+      render: (s: Sale) => {
+        const status = getSalePaymentStatus(s)
+        return (
+          <Badge variant={status === 'PAID' ? 'default' : 'secondary'}>
+            {status === 'PAID' && 'Pago'}
+            {status === 'PENDING' && 'Pendente'}
+            {status === 'REFUNDED' && 'Reembolsado'}
+            {status === 'CANCELED' && 'Cancelado'}
+          </Badge>
+        )
+      },
     },
     {
       key: 'actions',
@@ -272,8 +280,8 @@ export default function SalesPage() {
 
   // Stats
   const totalRevenue = sales
-    .filter((s) => s.paymentStatus === 'PAID')
-    .reduce((acc, s) => acc + s.finalAmount, 0)
+    .filter((s) => getSalePaymentStatus(s) === 'PAID')
+    .reduce((acc, s) => acc + getSaleFinalAmount(s), 0)
 
   const todaySales = sales.filter((s) => {
     const today = new Date()
@@ -286,8 +294,8 @@ export default function SalesPage() {
   })
 
   const todayRevenue = todaySales
-    .filter((s) => s.paymentStatus === 'PAID')
-    .reduce((acc, s) => acc + s.finalAmount, 0)
+    .filter((s) => getSalePaymentStatus(s) === 'PAID')
+    .reduce((acc, s) => acc + getSaleFinalAmount(s), 0)
 
   return (
     <div className="p-6 lg:p-8 space-y-6">
@@ -649,9 +657,9 @@ export default function SalesPage() {
                   {selectedSale.items?.map((item, i) => (
                     <div key={i} className="flex justify-between text-sm">
                       <span>
-                        {item.quantity}x {item.product?.name || item.service?.name}
+                        {item.quantity}x {item.product?.name || item.service?.name || 'Item'}
                       </span>
-                      <span>R$ {item.totalPrice.toFixed(2)}</span>
+                      <span>R$ {getSaleItemTotalPrice(item).toFixed(2)}</span>
                     </div>
                   ))}
                 </div>
@@ -662,17 +670,17 @@ export default function SalesPage() {
               <div className="space-y-1">
                 <div className="flex justify-between text-sm">
                   <span>Subtotal</span>
-                  <span>R$ {selectedSale.totalAmount.toFixed(2)}</span>
+                  <span>R$ {getSaleTotalAmount(selectedSale).toFixed(2)}</span>
                 </div>
-                {selectedSale.discount > 0 && (
+                {(selectedSale.discount ?? 0) > 0 && (
                   <div className="flex justify-between text-sm text-destructive">
                     <span>Desconto</span>
-                    <span>- R$ {selectedSale.discount.toFixed(2)}</span>
+                    <span>- R$ {(selectedSale.discount ?? 0).toFixed(2)}</span>
                   </div>
                 )}
                 <div className="flex justify-between text-lg font-bold pt-2">
                   <span>Total</span>
-                  <span>R$ {selectedSale.finalAmount.toFixed(2)}</span>
+                  <span>R$ {getSaleFinalAmount(selectedSale).toFixed(2)}</span>
                 </div>
               </div>
 

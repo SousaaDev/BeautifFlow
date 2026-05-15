@@ -67,8 +67,10 @@ export default function DashboardPage() {
           }),
         ])
 
-        // Calculate revenue from sales
-        const salesRevenue = sales.reduce((acc, sale) => acc + sale.finalAmount, 0)
+        const salesRevenue = sales.reduce(
+          (acc, sale) => acc + (sale.finalAmount ?? sale.total ?? 0),
+          0
+        )
         
         // Calculate revenue from completed appointments
         const appointmentsRevenue = monthlyAppointments
@@ -328,15 +330,15 @@ export default function DashboardPage() {
                     </div>
                     <div className="text-right">
                       <p className="font-bold text-foreground">
-                        R$ {sale.finalAmount.toFixed(2)}
+                        R$ {(sale.finalAmount ?? sale.total ?? 0).toFixed(2)}
                       </p>
                       <Badge
-                        variant={sale.paymentStatus === 'PAID' ? 'default' : 'secondary'}
+                        variant={(sale.paymentStatus ?? 'PAID') === 'PAID' ? 'default' : 'secondary'}
                         className="text-xs"
                       >
-                        {sale.paymentStatus === 'PAID' && 'Pago'}
-                        {sale.paymentStatus === 'PENDING' && 'Pendente'}
-                        {sale.paymentStatus === 'REFUNDED' && 'Reembolsado'}
+                        {(sale.paymentStatus ?? 'PAID') === 'PAID' && 'Pago'}
+                        {(sale.paymentStatus ?? 'PAID') === 'PENDING' && 'Pendente'}
+                        {(sale.paymentStatus ?? 'PAID') === 'REFUNDED' && 'Reembolsado'}
                       </Badge>
                     </div>
                   </div>
