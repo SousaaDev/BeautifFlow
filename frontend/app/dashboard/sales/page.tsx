@@ -13,7 +13,6 @@ import {
   Loader2,
   DollarSign,
   Eye,
-  AlertTriangle,
 } from 'lucide-react'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
@@ -170,7 +169,7 @@ export default function SalesPage() {
       setSales(salesData)
       setCustomers(custsData)
       setProfessionals(profsData)
-      setProducts(prodsData.filter((p) => p.isActive && p.currentStock > 0))
+      setProducts(prodsData.filter((p) => p.isActive))
     } catch (error) {
       toast.error('Erro ao carregar dados')
     } finally {
@@ -484,7 +483,15 @@ export default function SalesPage() {
                         >
                           <SelectTrigger>
                             {field.value ? (
-                              <span>{products.find((p) => p.id === field.value)?.name}</span>
+                              <span
+                                className={
+                                  products.find((p) => p.id === field.value)?.currentStock <= 0
+                                    ? 'line-through opacity-70'
+                                    : undefined
+                                }
+                              >
+                                {products.find((p) => p.id === field.value)?.name}
+                              </span>
                             ) : (
                               <SelectValue placeholder="Selecione" />
                             )}
@@ -492,8 +499,14 @@ export default function SalesPage() {
                           <SelectContent>
                             {products.length > 0 ? (
                               products.map((p) => (
-                                <SelectItem key={p.id} value={p.id}>
-                                  {p.name} - R$ {Number(p.salePrice || 0).toFixed(2)} (est: {p.currentStock})
+                                <SelectItem
+                                  key={p.id}
+                                  value={p.id}
+                                  disabled={p.currentStock <= 0}
+                                  className={p.currentStock <= 0 ? 'line-through opacity-70' : undefined}
+                                >
+                                  {p.name} - R$ {Number(p.salePrice || 0).toFixed(2)}{' '}
+                                  {p.currentStock <= 0 ? '(Sem estoque)' : `(est: ${p.currentStock})`}
                                 </SelectItem>
                               ))
                             ) : (
@@ -515,17 +528,9 @@ export default function SalesPage() {
                         min="1"
                         {...register(`items.${index}.quantity`)}
                       />
-                      <div className="flex items-center justify-between text-xs">
-                        <span className="text-muted-foreground">
-                          Disp: {getAvailableStock(watchItems[index]?.itemId)}
-                        </span>
-                        {watchItems[index]?.quantity > getAvailableStock(watchItems[index]?.itemId) && (
-                          <span className="inline-flex items-center gap-1 text-destructive">
-                            <AlertTriangle className="w-3 h-3" />
-                            Sem estoque suficiente
-                          </span>
-                        )}
-                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        Disp: {getAvailableStock(watchItems[index]?.itemId)}
+                      </p>
                     </div>
                   </div>
 
