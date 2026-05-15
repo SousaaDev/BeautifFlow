@@ -432,7 +432,7 @@ export default function SalesPage() {
                         <SelectValue placeholder="Nenhum" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">Nenhum</SelectItem>
+                        <SelectItem value="none">Nenhum</SelectItem>
                         {professionals.map((p) => (
                           <SelectItem key={p.id} value={p.id}>
                             {p.name}
