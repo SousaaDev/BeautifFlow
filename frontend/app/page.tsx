@@ -19,17 +19,17 @@ const features = [
   {
     icon: Calendar,
     title: 'Agendamento Online',
-    description: 'Seus clientes agendam 24/7 pela internet. Reduza ligacoes e no-shows.',
+    description: 'Seus clientes agendam 24/7 pela internet. Reduza ligações e no-shows.',
   },
   {
     icon: Users,
-    title: 'Gestao de Clientes',
-    description: 'Historico completo, preferencias e comunicacao automatizada.',
+    title: 'Gestão de Clientes',
+    description: 'Histórico completo, preferências e comunicação automatizada.',
   },
   {
     icon: BarChart3,
-    title: 'Relatorios Inteligentes',
-    description: 'Acompanhe faturamento, servicos mais vendidos e desempenho da equipe.',
+    title: 'Relatórios Inteligentes',
+    description: 'Acompanhe faturamento, serviços mais vendidos e desempenho da equipe.',
   },
   {
     icon: Smartphone,
@@ -39,19 +39,19 @@ const features = [
   {
     icon: Shield,
     title: 'Multi-tenant Seguro',
-    description: 'Cada salao tem seus dados isolados com seguranca de nivel empresarial.',
+    description: 'Cada salão tem seus dados isolados com segurança de nível empresarial.',
   },
   {
     icon: Star,
     title: 'Suporte Dedicado',
-    description: 'Equipe pronta para ajudar voce a tirar o maximo do sistema.',
+    description: 'Equipe pronta para ajudar você a tirar o máximo do sistema.',
   },
 ]
 
 const testimonials = [
   {
     name: 'Maria Santos',
-    role: 'Salao Bella Donna',
+    role: 'Salão Bella Donna',
     content: 'Desde que comecei a usar o BeautyFlow, meu faturamento aumentou 40%. Os clientes adoram poder agendar online!',
   },
   {
@@ -60,7 +60,7 @@ const testimonials = [
     content: 'O controle de estoque me salvou! Nunca mais deixei de vender por falta de produto.',
   },
   {
-    name: 'Ana Julia',
+    name: 'Ana Júlia',
     role: 'Studio de Beleza AJ',
     content: 'Interface simples e intuitiva. Minha equipe aprendeu a usar em minutos.',
   },
@@ -69,7 +69,7 @@ const testimonials = [
 const plans = [
   {
     name: 'Plano Único',
-    price: '39,90',
+    price: '49,90',
     description: 'Tudo incluso para seu salão',
     features: ['Profissionais ilimitados', 'Agendamentos ilimitados', 'Página de agendamento', 'Suporte dedicado'],
   },
@@ -93,7 +93,7 @@ export default function LandingPage() {
                 Recursos
               </a>
               <a href="#pricing" className="text-sm text-slate-500 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white transition-colors">
-                Precos
+                Preços
               </a>
               <a href="#testimonials" className="text-sm text-slate-500 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white transition-colors">
                 Depoimentos
@@ -104,7 +104,7 @@ export default function LandingPage() {
                 <Link href="/auth/login">Entrar</Link>
               </Button>
               <Button asChild className="bg-fuchsia-600 text-white hover:bg-fuchsia-500">
-                <Link href="/auth/signup">Comecar gratis</Link>
+                <Link href="/auth/signup">Começar grátis</Link>
               </Button>
             </div>
           </div>
@@ -120,8 +120,8 @@ export default function LandingPage() {
               Trial gratuito de 3 horas
             </Badge>
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-slate-950 dark:text-white">
-              Gestao completa para seu{' '}
-              <span className="text-pink-600 dark:text-pink-300">salao de beleza</span>
+              Gestão completa para seu{' '}
+              <span className="text-pink-600 dark:text-pink-300">salão de beleza</span>
             </h1>
             <p className="mt-6 text-lg text-slate-700 dark:text-slate-300 max-w-2xl mx-auto">
               Agende, gerencie clientes e profissionais, controle estoque e aumente seu faturamento com a plataforma mais completa do mercado.
@@ -129,7 +129,7 @@ export default function LandingPage() {
             <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
               <Button asChild size="lg" className="!bg-pink-500 !text-white hover:!bg-pink-400 shadow-lg shadow-pink-500/25 ring-2 ring-pink-500/40 focus-visible:ring-pink-400/60 gap-2 w-full sm:w-auto">
                 <Link href="/auth/signup">
-                  Comecar trial gratis
+                  Começar trial grátis
                   <ArrowRight className="w-4 h-4" />
                 </Link>
               </Button>
@@ -138,7 +138,7 @@ export default function LandingPage() {
               </Button>
             </div>
             <p className="mt-4 text-sm text-slate-600 dark:text-slate-400">
-              Sem cartao de credito. Sem compromisso.
+              Sem cartão de crédito. Sem compromisso.
             </p>
           </div>
         </div>
@@ -149,10 +149,10 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h2 className="text-3xl font-bold text-slate-950 dark:text-white">
-              Tudo que voce precisa em um so lugar
+              Tudo que você precisa em um só lugar
             </h2>
             <p className="mt-4 text-lg text-slate-600 dark:text-slate-400 max-w-2xl mx-auto">
-              Recursos pensados para simplificar sua rotina e fazer seu salao crescer.
+              Recursos pensados para simplificar sua rotina e fazer seu salão crescer.
             </p>
           </div>
 
@@ -224,7 +224,7 @@ export default function LandingPage() {
               O que nossos clientes dizem
             </h2>
             <p className="mt-4 text-lg text-slate-600 dark:text-slate-400 max-w-2xl mx-auto">
-              Mais de 500 saloes ja confiam no BeautyFlow.
+              Mais de 500 salões já confiam no BeautyFlow.
             </p>
           </div>
 
@@ -255,15 +255,15 @@ export default function LandingPage() {
       <section className="py-20 lg:py-32 bg-slate-100 text-slate-950 dark:bg-slate-950 dark:text-white">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <h2 className="text-3xl sm:text-4xl font-bold">
-            Pronto para transformar seu salao?
+            Pronto para transformar seu salão?
           </h2>
           <p className="mt-4 text-lg text-slate-600 dark:text-slate-300 max-w-2xl mx-auto">
-            Comece seu trial gratuito agora e veja a diferenca em minutos.
+            Comece seu trial gratuito agora e veja a diferença em minutos.
           </p>
           <div className="mt-10">
             <Button asChild size="lg" className="!bg-pink-500 !text-white hover:!bg-pink-400 shadow-lg shadow-pink-500/25 ring-2 ring-pink-500/40 focus-visible:ring-pink-400/60 gap-2">
               <Link href="/auth/signup">
-                Comecar gratis por 3 horas
+                Começar grátis por 3 horas
                 <ArrowRight className="w-4 h-4" />
               </Link>
             </Button>
