@@ -522,16 +522,14 @@ export default function SalesPage() {
 
                   <div className="col-span-2">
                     <Label className="text-xs">Qtd</Label>
-                    <div className="space-y-1">
-                      <Input
-                        type="number"
-                        min="1"
-                        {...register(`items.${index}.quantity`)}
-                      />
-                      <p className="text-xs text-muted-foreground">
-                        Disp: {getAvailableStock(watchItems[index]?.itemId)}
-                      </p>
-                    </div>
+                    <p className="text-xs text-muted-foreground mb-1">
+                      Disp: {getAvailableStock(watchItems[index]?.itemId)}
+                    </p>
+                    <Input
+                      type="number"
+                      min="1"
+                      {...register(`items.${index}.quantity`)}
+                    />
                   </div>
 
                   <div className="col-span-6 sm:col-span-3">
