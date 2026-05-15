@@ -469,7 +469,11 @@ export default function SalesPage() {
                           value={field.value}
                         >
                           <SelectTrigger>
-                            <SelectValue placeholder="Selecione" />
+                            {field.value ? (
+                              <span>{products.find((p) => p.id === field.value)?.name}</span>
+                            ) : (
+                              <SelectValue placeholder="Selecione" />
+                            )}
                           </SelectTrigger>
                           <SelectContent>
                             {products.length > 0 ? (
