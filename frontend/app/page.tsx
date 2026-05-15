@@ -81,9 +81,9 @@ export default function LandingPage() {
       {/* Header */}
       <header className="border-b border-slate-200 bg-white/90 text-slate-950 backdrop-blur supports-[backdrop-filter]:bg-white/70 sticky top-0 z-50 dark:border-slate-800 dark:bg-slate-950/95 dark:text-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex h-16 items-center justify-between">
+          <div className="flex h-24 items-center justify-between">
             <Link href="/">
-              <Image src="/logo.png" alt="BeautyFlow Logo" width={48} height={48} className="object-contain shadow-lg shadow-fuchsia-500/20" />
+              <Image src="/logo.png" alt="BeautyFlow Logo" width={96} height={96} className="object-contain shadow-lg shadow-fuchsia-500/20" />
             </Link>
             <nav className="hidden md:flex items-center gap-6">
               <a href="#features" className="text-base text-slate-500 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white transition-colors">
