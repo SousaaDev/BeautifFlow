@@ -21,9 +21,8 @@ import { useAuth } from '@/contexts/auth-context'
 import { salesApi } from '@/lib/api/sales'
 import { customersApi } from '@/lib/api/customers'
 import { professionalsApi } from '@/lib/api/professionals'
-import { servicesApi } from '@/lib/api/services'
 import { productsApi } from '@/lib/api/products'
-import type { Sale, SaleItem, Customer, Professional, Service, Product, PaymentMethod } from '@/lib/types'
+import type { Sale, SaleItem, Customer, Professional, Product, PaymentMethod } from '@/lib/types'
 
 import { DataTable } from '@/components/data-table'
 import { Button } from '@/components/ui/button'
@@ -50,7 +49,6 @@ import {
 import { Separator } from '@/components/ui/separator'
 
 const saleItemSchema = z.object({
-  type: z.enum(['product', 'service']),
   itemId: z.string().min(1, 'Selecione um item'),
   quantity: z.coerce.number().min(1, 'Quantidade minima: 1'),
   unitPrice: z.coerce.number().min(0),
@@ -82,7 +80,6 @@ export default function SalesPage() {
   const [sales, setSales] = useState<Sale[]>([])
   const [customers, setCustomers] = useState<Customer[]>([])
   const [professionals, setProfessionals] = useState<Professional[]>([])
-  const [services, setServices] = useState<Service[]>([])
   const [products, setProducts] = useState<Product[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
@@ -101,7 +98,7 @@ export default function SalesPage() {
   } = useForm<SaleFormData>({
     resolver: zodResolver(saleSchema),
     defaultValues: {
-      items: [{ type: 'service', itemId: '', quantity: 1, unitPrice: 0 }],
+      items: [{ itemId: '', quantity: 1, unitPrice: 0 }],
       discount: 0,
       paymentMethod: 'CASH',
     },
@@ -163,17 +160,15 @@ export default function SalesPage() {
     if (!tenant?.id) return
     setIsLoading(true)
     try {
-      const [salesData, custsData, profsData, servsData, prodsData] = await Promise.all([
+      const [salesData, custsData, profsData, prodsData] = await Promise.all([
         salesApi.list(tenant.id),
         customersApi.list(tenant.id),
         professionalsApi.list(tenant.id),
-        servicesApi.list(tenant.id),
         productsApi.list(tenant.id),
       ])
       setSales(salesData)
       setCustomers(custsData)
       setProfessionals(profsData)
-      setServices(servsData.filter((s) => s.isActive))
       setProducts(prodsData.filter((p) => p.isActive && p.currentStock > 0))
     } catch (error) {
       toast.error('Erro ao carregar dados')
@@ -186,7 +181,7 @@ export default function SalesPage() {
     reset({
       customerId: '',
       professionalId: '',
-      items: [{ type: 'service', itemId: '', quantity: 1, unitPrice: 0 }],
+      items: [{ itemId: '', quantity: 1, unitPrice: 0 }],
       discount: 0,
       paymentMethod: 'CASH',
       notes: '',
@@ -208,8 +203,7 @@ export default function SalesPage() {
         customerId: data.customerId || undefined,
         professionalId: data.professionalId || undefined,
         items: data.items.map((item) => ({
-          productId: item.type === 'product' ? item.itemId : undefined,
-          serviceId: item.type === 'service' ? item.itemId : undefined,
+          productId: item.itemId,
           quantity: item.quantity,
           unitPrice: item.unitPrice,
         })),
@@ -230,17 +224,10 @@ export default function SalesPage() {
     }
   }
 
-  const handleItemChange = (index: number, itemId: string, type: 'product' | 'service') => {
-    if (type === 'service') {
-      const service = services.find((s) => s.id === itemId)
-      if (service) {
-        setValue(`items.${index}.unitPrice`, service.price)
-      }
-    } else {
-      const product = products.find((p) => p.id === itemId)
-      if (product) {
-        setValue(`items.${index}.unitPrice`, product.salePrice)
-      }
+  const handleItemChange = (index: number, itemId: string) => {
+    const product = products.find((p) => p.id === itemId)
+    if (product) {
+      setValue(`items.${index}.unitPrice`, product.salePrice)
     }
   }
 
@@ -455,7 +442,7 @@ export default function SalesPage() {
                   type="button"
                   variant="outline"
                   size="sm"
-                  onClick={() => append({ type: 'service', itemId: '', quantity: 1, unitPrice: 0 })}
+                  onClick={() => append({ itemId: '', quantity: 1, unitPrice: 0 })}
                 >
                   <Plus className="w-4 h-4 mr-2" />
                   Adicionar item
@@ -468,33 +455,7 @@ export default function SalesPage() {
 
               {fields.map((field, index) => (
                 <div key={field.id} className="grid grid-cols-12 gap-2 items-end">
-                  <div className="col-span-2">
-                    <Label className="text-xs">Tipo</Label>
-                    <Controller
-                      name={`items.${index}.type`}
-                      control={control}
-                      render={({ field }) => (
-                        <Select
-                          onValueChange={(v) => {
-                            field.onChange(v)
-                            setValue(`items.${index}.itemId`, '')
-                            setValue(`items.${index}.unitPrice`, 0)
-                          }}
-                          value={field.value}
-                        >
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="service">Servico</SelectItem>
-                            <SelectItem value="product">Produto</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      )}
-                    />
-                  </div>
-
-                  <div className="col-span-4">
+                  <div className="col-span-6">
                     <Label className="text-xs">Item</Label>
                     <Controller
                       name={`items.${index}.itemId`}
@@ -503,7 +464,7 @@ export default function SalesPage() {
                         <Select
                           onValueChange={(v) => {
                             field.onChange(v)
-                            handleItemChange(index, v, watchItems[index]?.type || 'service')
+                            handleItemChange(index, v)
                           }}
                           value={field.value}
                         >
@@ -511,19 +472,18 @@ export default function SalesPage() {
                             <SelectValue placeholder="Selecione" />
                           </SelectTrigger>
                           <SelectContent>
-  {watchItems[index]?.type === 'service'
-    ? services.length > 0 ? services.map((s) => (
-        <SelectItem key={s.id} value={s.id || "id-invalid"}>
-          {s.name} - R$ {Number(s.price || 0).toFixed(2)}
-        </SelectItem>
-      )) : <SelectItem disabled value="none">Nenhum serviço encontrado</SelectItem>
-    : products.length > 0 ? products.map((p) => (
-        <SelectItem key={p.id} value={p.id || "id-invalid"}>
-          {p.name} - R$ {Number(p.salePrice || 0).toFixed(2)} (est: {p.currentStock})
-        </SelectItem>
-      )) : <SelectItem disabled value="none">Nenhum produto encontrado</SelectItem>
-  }
-</SelectContent>
+                            {products.length > 0 ? (
+                              products.map((p) => (
+                                <SelectItem key={p.id} value={p.id}>
+                                  {p.name} - R$ {Number(p.salePrice || 0).toFixed(2)} (est: {p.currentStock})
+                                </SelectItem>
+                              ))
+                            ) : (
+                              <SelectItem disabled value="none">
+                                Nenhum produto encontrado
+                              </SelectItem>
+                            )}
+                          </SelectContent>
                         </Select>
                       )}
                     />
