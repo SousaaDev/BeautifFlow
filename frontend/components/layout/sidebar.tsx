@@ -1,12 +1,12 @@
 'use client'
 
 import Link from 'next/link'
+import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 import {
   LayoutDashboard,
   Users,
   UserCircle,
-  Flower2,
   Sparkles,
   Package,
   Calendar,
@@ -58,17 +58,9 @@ export function Sidebar() {
 
   const NavContent = () => (
     <>
-      <div className="p-6">
-        <Link href="/dashboard" className="flex items-center gap-3">
-          <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-pink-400 to-rose-300">
-            <Flower2 className="w-6 h-6 text-white" />
-          </div>
-          <div className="flex flex-col">
-            <span className="font-bold text-foreground">BeautyFlow</span>
-            <span className="text-xs text-muted-foreground truncate max-w-[140px]">
-              {tenant?.name || 'Carregando...'}
-            </span>
-          </div>
+      <div className="p-6 flex justify-center">
+        <Link href="/dashboard">
+          <Image src="/logo.png" alt="BeautyFlow Logo" width={40} height={40} className="object-contain" />
         </Link>
       </div>
 
@@ -137,11 +129,8 @@ export function Sidebar() {
     <>
       {/* Mobile menu button */}
       <div className="lg:hidden fixed top-0 left-0 right-0 z-50 flex items-center justify-between p-4 bg-background border-b">
-        <Link href="/dashboard" className="flex items-center gap-2">
-          <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-gradient-to-br from-pink-500 to-rose-400">
-            <Flower2 className="w-5 h-5 text-white" />
-          </div>
-          <span className="font-bold text-foreground">BeautyFlow</span>
+        <Link href="/dashboard">
+          <Image src="/logo.png" alt="BeautyFlow Logo" width={32} height={32} className="object-contain" />
         </Link>
         <Button
           variant="ghost"

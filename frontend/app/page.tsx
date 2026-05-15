@@ -1,6 +1,6 @@
 import Link from 'next/link'
+import Image from 'next/image'
 import {
-  Flower2,
   Calendar,
   Users,
   BarChart3,
@@ -82,11 +82,8 @@ export default function LandingPage() {
       <header className="border-b border-slate-200 bg-white/90 text-slate-950 backdrop-blur supports-[backdrop-filter]:bg-white/70 sticky top-0 z-50 dark:border-slate-800 dark:bg-slate-950/95 dark:text-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex h-16 items-center justify-between">
-            <Link href="/" className="flex items-center gap-3">
-              <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-fuchsia-500 to-rose-500 shadow-lg shadow-fuchsia-500/20">
-                <Flower2 className="w-6 h-6 text-white" />
-              </div>
-              <span className="text-xl font-bold text-slate-950 dark:text-white">BeautyFlow</span>
+            <Link href="/">
+              <Image src="/logo.png" alt="BeautyFlow Logo" width={40} height={40} className="object-contain shadow-lg shadow-fuchsia-500/20" />
             </Link>
             <nav className="hidden md:flex items-center gap-6">
               <a href="#features" className="text-sm text-slate-500 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white transition-colors">
