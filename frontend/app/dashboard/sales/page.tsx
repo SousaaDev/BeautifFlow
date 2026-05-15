@@ -130,6 +130,8 @@ export default function SalesPage() {
       ? toNumber(item.totalPrice)
       : toNumber(item.unitPrice) * toNumber(item.quantity)
 
+  const [openOnLoad, setOpenOnLoad] = useState(false)
+
   useEffect(() => {
     if (tenant?.id) {
       loadData()
@@ -138,10 +140,17 @@ export default function SalesPage() {
 
   useEffect(() => {
     if (searchParams.get('new') === 'true') {
+      setOpenOnLoad(true)
+    }
+  }, [searchParams])
+
+  useEffect(() => {
+    if (openOnLoad) {
       openCreateDialog()
       router.replace('/dashboard/sales')
+      setOpenOnLoad(false)
     }
-  }, [searchParams, router])
+  }, [openOnLoad, router])
 
   const loadData = async () => {
     if (!tenant?.id) return
