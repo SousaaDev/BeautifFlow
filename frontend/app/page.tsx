@@ -86,21 +86,21 @@ export default function LandingPage() {
               <Image src="/logo.png" alt="BeautyFlow Logo" width={48} height={48} className="object-contain shadow-lg shadow-fuchsia-500/20" />
             </Link>
             <nav className="hidden md:flex items-center gap-6">
-              <a href="#features" className="text-sm text-slate-500 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white transition-colors">
+              <a href="#features" className="text-base text-slate-500 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white transition-colors">
                 Recursos
               </a>
-              <a href="#pricing" className="text-sm text-slate-500 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white transition-colors">
+              <a href="#pricing" className="text-base text-slate-500 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white transition-colors">
                 Preços
               </a>
-              <a href="#testimonials" className="text-sm text-slate-500 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white transition-colors">
+              <a href="#testimonials" className="text-base text-slate-500 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white transition-colors">
                 Depoimentos
               </a>
             </nav>
             <div className="flex items-center gap-3">
-              <Button asChild variant="ghost" className="text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white">
+              <Button asChild variant="ghost" className="text-base text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white">
                 <Link href="/auth/login">Entrar</Link>
               </Button>
-              <Button asChild className="bg-fuchsia-600 text-white hover:bg-fuchsia-500">
+              <Button asChild className="text-base bg-fuchsia-600 text-white hover:bg-fuchsia-500">
                 <Link href="/auth/signup">Começar grátis</Link>
               </Button>
             </div>
