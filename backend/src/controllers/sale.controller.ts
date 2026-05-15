@@ -8,7 +8,6 @@ import { ProductRepositoryImpl } from '../models/ProductRepositoryImpl';
 import { CustomerRepositoryImpl } from '../models/CustomerRepositoryImpl';
 
 const createSaleSchema = z.object({
-  tenantId: z.string().uuid(),
   customerId: z.string().uuid().optional(),
   professionalId: z.string().uuid().optional(),
   paymentMethod: z.string().optional(),
@@ -19,7 +18,7 @@ const createSaleSchema = z.object({
       quantity: z.number().int().min(1),
       unitPrice: z.number().min(0),
     })
-  ),
+  ).min(1),
 });
 
 const saleRepository = new SaleRepositoryImpl(pool);
@@ -32,6 +31,11 @@ export const store = async (req: Request, res: Response) => {
   const client = await pool.connect();
   
   try {
+    const tenantId = req.params.tenantId as string;
+    if (!tenantId) {
+      return res.status(400).json({ error: 'tenantId is required' });
+    }
+
     const data = createSaleSchema.parse(req.body);
 
     // Validar que cada item tem pelo menos productId ou serviceId
@@ -51,7 +55,7 @@ export const store = async (req: Request, res: Response) => {
        VALUES (gen_random_uuid(), $1, $2, $3, $4, $5)
        RETURNING id, tenant_id as "tenantId", customer_id as "customerId", professional_id as "professionalId",
                  total, payment_method as "paymentMethod", created_at as "createdAt"`,
-      [data.tenantId, data.customerId || null, data.professionalId || null, total, data.paymentMethod || null]
+      [tenantId, data.customerId || null, data.professionalId || null, total, data.paymentMethod || null]
     );
     const saleId = sale.rows[0].id;
 
@@ -76,7 +80,7 @@ export const store = async (req: Request, res: Response) => {
     await client.query(
       `INSERT INTO transactions (id, tenant_id, type, category, amount, payment_method, reference_id)
        VALUES (gen_random_uuid(), $1, 'IN', 'sale', $2, $3, $4)`,
-      [data.tenantId, total, data.paymentMethod || 'cash', saleId]
+      [tenantId, total, data.paymentMethod || 'cash', saleId]
     );
 
     // 4. Atualizar last_visit do cliente se existir
