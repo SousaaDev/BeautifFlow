@@ -9,7 +9,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import Onboarding from '@/components/onboarding/Onboarding'
 
 function DashboardContent({ children }: { children: React.ReactNode }) {
-  const { isLoading, isAuthenticated } = useAuth()
+  const { isLoading, isAuthenticated, tenant } = useAuth()
   const router = useRouter()
   const searchParams = useSearchParams()
   const [openOnboarding, setOpenOnboarding] = useState(false)
@@ -22,12 +22,16 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (typeof window === 'undefined') return
+    // wait until auth is resolved and user is authenticated
+    if (isLoading) return
+    if (!isAuthenticated) return
+
     const forced = searchParams?.get('onboarding') === 'true'
     const completed = window.localStorage.getItem('onboardingCompleted') === '1'
     if (forced || !completed) {
       setOpenOnboarding(true)
     }
-  }, [searchParams])
+  }, [searchParams, isLoading, isAuthenticated])
 
   if (isLoading) {
     return (
