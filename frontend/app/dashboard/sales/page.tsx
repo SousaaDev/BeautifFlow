@@ -131,6 +131,7 @@ export default function SalesPage() {
       : toNumber(item.unitPrice) * toNumber(item.quantity)
 
   const [openOnLoad, setOpenOnLoad] = useState(false)
+  const [shouldClearQuery, setShouldClearQuery] = useState(false)
 
   useEffect(() => {
     if (tenant?.id) {
@@ -140,17 +141,24 @@ export default function SalesPage() {
 
   useEffect(() => {
     if (searchParams.get('new') === 'true') {
+      setShouldClearQuery(true)
       setOpenOnLoad(true)
+    } else if (typeof window !== 'undefined' && window.localStorage.getItem('salesNewPopup') === '1') {
+      window.localStorage.removeItem('salesNewPopup')
+      setOpenOnLoad(true)
+      setShouldClearQuery(false)
     }
   }, [searchParams])
 
   useEffect(() => {
     if (openOnLoad) {
       openCreateDialog()
-      router.replace('/dashboard/sales')
+      if (shouldClearQuery) {
+        router.replace('/dashboard/sales')
+      }
       setOpenOnLoad(false)
     }
-  }, [openOnLoad, router])
+  }, [openOnLoad, router, shouldClearQuery])
 
   const loadData = async () => {
     if (!tenant?.id) return
@@ -374,8 +382,6 @@ export default function SalesPage() {
         columns={columns}
         isLoading={isLoading}
         searchPlaceholder="Buscar vendas..."
-        onAdd={openCreateDialog}
-        addLabel="Nova venda"
         emptyMessage="Nenhuma venda registrada"
         emptyIcon={<ShoppingCart className="w-12 h-12 mx-auto text-muted-foreground/50" />}
         getRowKey={(s) => s.id}
