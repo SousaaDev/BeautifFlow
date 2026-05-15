@@ -511,18 +511,19 @@ export default function SalesPage() {
                             <SelectValue placeholder="Selecione" />
                           </SelectTrigger>
                           <SelectContent>
-                            {watchItems[index]?.type === 'service'
-                              ? services.map((s) => (
-                                  <SelectItem key={s.id} value={s.id}>
-                                    {s.name} - R$ {s.price.toFixed(2)}
-                                  </SelectItem>
-                                ))
-                              : products.map((p) => (
-                                  <SelectItem key={p.id} value={p.id}>
-                                    {p.name} - R$ {p.salePrice.toFixed(2)} (est: {p.currentStock})
-                                  </SelectItem>
-                                ))}
-                          </SelectContent>
+  {watchItems[index]?.type === 'service'
+    ? services.length > 0 ? services.map((s) => (
+        <SelectItem key={s.id} value={s.id || "id-invalid"}>
+          {s.name} - R$ {Number(s.price || 0).toFixed(2)}
+        </SelectItem>
+      )) : <SelectItem disabled value="none">Nenhum serviço encontrado</SelectItem>
+    : products.length > 0 ? products.map((p) => (
+        <SelectItem key={p.id} value={p.id || "id-invalid"}>
+          {p.name} - R$ {Number(p.salePrice || 0).toFixed(2)} (est: {p.currentStock})
+        </SelectItem>
+      )) : <SelectItem disabled value="none">Nenhum produto encontrado</SelectItem>
+  }
+</SelectContent>
                         </Select>
                       )}
                     />
