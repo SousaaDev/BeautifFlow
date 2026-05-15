@@ -8,9 +8,11 @@ import { ProductRepositoryImpl } from '../models/ProductRepositoryImpl';
 import { CustomerRepositoryImpl } from '../models/CustomerRepositoryImpl';
 
 const createSaleSchema = z.object({
-  customerId: z.string().uuid().optional(),
-  professionalId: z.string().uuid().optional(),
+  customerId: z.string().uuid().optional().or(z.literal('')),
+  professionalId: z.string().uuid().optional().or(z.literal('')),
   paymentMethod: z.string().optional(),
+  discount: z.number().min(0).default(0),
+  notes: z.string().optional(),
   items: z.array(
     z.object({
       productId: z.string().uuid().optional(),
@@ -48,14 +50,16 @@ export const store = async (req: Request, res: Response) => {
 
     // Calcular total
     const total = data.items.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0);
+    const discount = data.discount || 0;
+    const finalAmount = Math.max(0, total - discount);
 
     // 1. Criar venda
     const sale = await client.query(
-      `INSERT INTO sales (id, tenant_id, customer_id, professional_id, total, payment_method)
-       VALUES (gen_random_uuid(), $1, $2, $3, $4, $5)
+      `INSERT INTO sales (id, tenant_id, customer_id, professional_id, total, discount, final_amount, payment_method, notes)
+       VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, $8)
        RETURNING id, tenant_id as "tenantId", customer_id as "customerId", professional_id as "professionalId",
-                 total, payment_method as "paymentMethod", created_at as "createdAt"`,
-      [tenantId, data.customerId || null, data.professionalId || null, total, data.paymentMethod || null]
+                 total, discount, final_amount as "finalAmount", payment_method as "paymentMethod", notes, created_at as "createdAt"`,
+      [tenantId, data.customerId || null, data.professionalId || null, total, discount, finalAmount, data.paymentMethod || null, data.notes || null]
     );
     const saleId = sale.rows[0].id;
 
@@ -80,7 +84,7 @@ export const store = async (req: Request, res: Response) => {
     await client.query(
       `INSERT INTO transactions (id, tenant_id, type, category, amount, payment_method, reference_id)
        VALUES (gen_random_uuid(), $1, 'IN', 'sale', $2, $3, $4)`,
-      [tenantId, total, data.paymentMethod || 'cash', saleId]
+      [tenantId, finalAmount, data.paymentMethod || 'cash', saleId]
     );
 
     // 4. Atualizar last_visit do cliente se existir
@@ -133,8 +137,51 @@ export const index = async (req: Request, res: Response) => {
       sales = await saleRepository.findByTenant(tenantId as string);
     }
 
-    res.json(sales);
+    // Fetch items and relations for each sale
+    const salesWithDetails = await Promise.all(
+      sales.map(async (sale) => {
+        const items = await saleItemRepository.findBySale(sale.id);
+        
+        // Fetch customer and professional details
+        const customerQuery = sale.customerId 
+          ? await pool.query('SELECT id, name FROM customers WHERE id = $1', [sale.customerId])
+          : null;
+        const professionalQuery = sale.professionalId
+          ? await pool.query('SELECT id, name FROM professionals WHERE id = $1', [sale.professionalId])
+          : null;
+        
+        // Fetch product/service details for items
+        const itemsWithDetails = await Promise.all(
+          items.map(async (item) => {
+            let product = null;
+            let service = null;
+            
+            if (item.productId) {
+              const productQuery = await pool.query('SELECT id, name FROM products WHERE id = $1', [item.productId]);
+              product = productQuery.rows[0] || null;
+            }
+            
+            if (item.serviceId) {
+              const serviceQuery = await pool.query('SELECT id, name FROM services WHERE id = $1', [item.serviceId]);
+              service = serviceQuery.rows[0] || null;
+            }
+            
+            return { ...item, product, service };
+          })
+        );
+
+        return {
+          ...sale,
+          customer: customerQuery?.rows[0] || null,
+          professional: professionalQuery?.rows[0] || null,
+          items: itemsWithDetails,
+        };
+      })
+    );
+
+    res.json(salesWithDetails);
   } catch (error) {
+    console.error('Error fetching sales:', error);
     res.status(500).json({ error: 'Failed to fetch sales' });
   }
 };
@@ -148,8 +195,43 @@ export const show = async (req: Request, res: Response) => {
     }
 
     const items = await saleItemRepository.findBySale(id);
-    res.json({ ...sale, items });
+    
+    // Fetch customer and professional details
+    const customerQuery = sale.customerId 
+      ? await pool.query('SELECT id, name FROM customers WHERE id = $1', [sale.customerId])
+      : null;
+    const professionalQuery = sale.professionalId
+      ? await pool.query('SELECT id, name FROM professionals WHERE id = $1', [sale.professionalId])
+      : null;
+    
+    // Fetch product/service details for items
+    const itemsWithDetails = await Promise.all(
+      items.map(async (item) => {
+        let product = null;
+        let service = null;
+        
+        if (item.productId) {
+          const productQuery = await pool.query('SELECT id, name FROM products WHERE id = $1', [item.productId]);
+          product = productQuery.rows[0] || null;
+        }
+        
+        if (item.serviceId) {
+          const serviceQuery = await pool.query('SELECT id, name FROM services WHERE id = $1', [item.serviceId]);
+          service = serviceQuery.rows[0] || null;
+        }
+        
+        return { ...item, product, service };
+      })
+    );
+
+    res.json({
+      ...sale,
+      customer: customerQuery?.rows[0] || null,
+      professional: professionalQuery?.rows[0] || null,
+      items: itemsWithDetails,
+    });
   } catch (error) {
+    console.error('Error fetching sale:', error);
     res.status(500).json({ error: 'Failed to fetch sale' });
   }
 };

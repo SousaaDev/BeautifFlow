@@ -9,10 +9,11 @@ export class SaleRepositoryImpl implements SaleRepository {
   async create(sale: Omit<Sale, 'id' | 'createdAt'>): Promise<Sale> {
     const id = uuidv4();
     const query = `
-      INSERT INTO sales (id, tenant_id, customer_id, professional_id, total, payment_method)
-      VALUES ($1, $2, $3, $4, $5, $6)
+      INSERT INTO sales (id, tenant_id, customer_id, professional_id, total, discount, final_amount, payment_method, payment_status, notes)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
       RETURNING id, tenant_id as "tenantId", customer_id as "customerId", professional_id as "professionalId",
-                total, payment_method as "paymentMethod", created_at as "createdAt"
+                total, discount, final_amount as "finalAmount", payment_method as "paymentMethod", 
+                payment_status as "paymentStatus", notes, created_at as "createdAt"
     `;
     const result = await this.pool.query(query, [
       id,
@@ -20,7 +21,11 @@ export class SaleRepositoryImpl implements SaleRepository {
       sale.customerId || null,
       sale.professionalId || null,
       sale.total,
+      sale.discount || 0,
+      sale.finalAmount || sale.total,
       sale.paymentMethod || null,
+      sale.paymentStatus || 'PAID',
+      sale.notes || null,
     ]);
     return result.rows[0];
   }
@@ -28,7 +33,8 @@ export class SaleRepositoryImpl implements SaleRepository {
   async findById(id: string): Promise<Sale | null> {
     const query = `
       SELECT id, tenant_id as "tenantId", customer_id as "customerId", professional_id as "professionalId",
-             total, payment_method as "paymentMethod", created_at as "createdAt"
+             total, discount, final_amount as "finalAmount", payment_method as "paymentMethod", 
+             payment_status as "paymentStatus", notes, created_at as "createdAt"
       FROM sales WHERE id = $1
     `;
     const result = await this.pool.query(query, [id]);
@@ -38,7 +44,8 @@ export class SaleRepositoryImpl implements SaleRepository {
   async findByTenant(tenantId: string): Promise<Sale[]> {
     const query = `
       SELECT id, tenant_id as "tenantId", customer_id as "customerId", professional_id as "professionalId",
-             total, payment_method as "paymentMethod", created_at as "createdAt"
+             total, discount, final_amount as "finalAmount", payment_method as "paymentMethod", 
+             payment_status as "paymentStatus", notes, created_at as "createdAt"
       FROM sales WHERE tenant_id = $1
       ORDER BY created_at DESC
     `;
@@ -49,7 +56,8 @@ export class SaleRepositoryImpl implements SaleRepository {
   async findByTenantAndId(tenantId: string, id: string): Promise<Sale | null> {
     const query = `
       SELECT id, tenant_id as "tenantId", customer_id as "customerId", professional_id as "professionalId",
-             total, payment_method as "paymentMethod", created_at as "createdAt"
+             total, discount, final_amount as "finalAmount", payment_method as "paymentMethod", 
+             payment_status as "paymentStatus", notes, created_at as "createdAt"
       FROM sales WHERE id = $1 AND tenant_id = $2
     `;
     const result = await this.pool.query(query, [id, tenantId]);
@@ -65,9 +73,25 @@ export class SaleRepositoryImpl implements SaleRepository {
       fields.push(`total = $${paramCount++}`);
       values.push(data.total);
     }
+    if (data.discount !== undefined) {
+      fields.push(`discount = $${paramCount++}`);
+      values.push(data.discount);
+    }
+    if (data.finalAmount !== undefined) {
+      fields.push(`final_amount = $${paramCount++}`);
+      values.push(data.finalAmount);
+    }
     if (data.paymentMethod !== undefined) {
       fields.push(`payment_method = $${paramCount++}`);
       values.push(data.paymentMethod);
+    }
+    if (data.paymentStatus !== undefined) {
+      fields.push(`payment_status = $${paramCount++}`);
+      values.push(data.paymentStatus);
+    }
+    if (data.notes !== undefined) {
+      fields.push(`notes = $${paramCount++}`);
+      values.push(data.notes);
     }
 
     if (fields.length === 0) {
@@ -79,7 +103,8 @@ export class SaleRepositoryImpl implements SaleRepository {
       UPDATE sales SET ${fields.join(', ')}
       WHERE id = $${paramCount}
       RETURNING id, tenant_id as "tenantId", customer_id as "customerId", professional_id as "professionalId",
-                total, payment_method as "paymentMethod", created_at as "createdAt"
+                total, discount, final_amount as "finalAmount", payment_method as "paymentMethod", 
+                payment_status as "paymentStatus", notes, created_at as "createdAt"
     `;
     const result = await this.pool.query(query, values);
     return result.rows[0];
@@ -92,7 +117,8 @@ export class SaleRepositoryImpl implements SaleRepository {
   async findByCustomer(tenantId: string, customerId: string): Promise<Sale[]> {
     const query = `
       SELECT id, tenant_id as "tenantId", customer_id as "customerId", professional_id as "professionalId",
-             total, payment_method as "paymentMethod", created_at as "createdAt"
+             total, discount, final_amount as "finalAmount", payment_method as "paymentMethod", 
+             payment_status as "paymentStatus", notes, created_at as "createdAt"
       FROM sales WHERE tenant_id = $1 AND customer_id = $2
       ORDER BY created_at DESC
     `;
@@ -103,7 +129,8 @@ export class SaleRepositoryImpl implements SaleRepository {
   async findByDateRange(tenantId: string, startDate: Date, endDate: Date): Promise<Sale[]> {
     const query = `
       SELECT id, tenant_id as "tenantId", customer_id as "customerId", professional_id as "professionalId",
-             total, payment_method as "paymentMethod", created_at as "createdAt"
+             total, discount, final_amount as "finalAmount", payment_method as "paymentMethod", 
+             payment_status as "paymentStatus", notes, created_at as "createdAt"
       FROM sales WHERE tenant_id = $1 AND created_at >= $2 AND created_at <= $3
       ORDER BY created_at DESC
     `;

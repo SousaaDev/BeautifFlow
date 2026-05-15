@@ -4,6 +4,10 @@ export interface Sale {
   customerId?: string;
   professionalId?: string;
   total: number;
+  discount?: number;
+  finalAmount?: number;
   paymentMethod?: string;
+  paymentStatus?: string;
+  notes?: string;
   createdAt: Date;
 }

@@ -156,11 +156,19 @@ const createTables = async () => {
         customer_id UUID REFERENCES customers(id),
         professional_id UUID REFERENCES professionals(id),
         total DECIMAL(10,2) NOT NULL,
+        discount DECIMAL(10,2) DEFAULT 0,
+        final_amount DECIMAL(10,2),
         payment_method VARCHAR(50),
+        payment_status VARCHAR(20) DEFAULT 'PAID',
+        notes TEXT,
         created_at TIMESTAMP DEFAULT NOW()
       );
     `);
     await pool.query(`ALTER TABLE sales ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT NOW();`);
+    await pool.query(`ALTER TABLE sales ADD COLUMN IF NOT EXISTS discount DECIMAL(10,2) DEFAULT 0;`);
+    await pool.query(`ALTER TABLE sales ADD COLUMN IF NOT EXISTS final_amount DECIMAL(10,2);`);
+    await pool.query(`ALTER TABLE sales ADD COLUMN IF NOT EXISTS payment_status VARCHAR(20) DEFAULT 'PAID';`);
+    await pool.query(`ALTER TABLE sales ADD COLUMN IF NOT EXISTS notes TEXT;`);
 
     // Create sale_items table
     await pool.query(`
