@@ -83,7 +83,7 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex h-16 items-center justify-between">
             <Link href="/">
-              <Image src="/logo.png" alt="BeautyFlow Logo" width={40} height={40} className="object-contain shadow-lg shadow-fuchsia-500/20" />
+              <Image src="/logo.png" alt="BeautyFlow Logo" width={48} height={48} className="object-contain shadow-lg shadow-fuchsia-500/20" />
             </Link>
             <nav className="hidden md:flex items-center gap-6">
               <a href="#features" className="text-sm text-slate-500 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white transition-colors">
@@ -273,7 +273,7 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col md:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-3">
-              <Image src="/logo.png" alt="BeautyFlow Logo" width={32} height={32} className="object-contain" />
+              <Image src="/logo.png" alt="BeautyFlow Logo" width={40} height={40} className="object-contain" />
             </div>
             <div className="flex items-center gap-6 text-sm text-slate-500 dark:text-slate-400">
               <a href="#" className="hover:text-slate-950 dark:hover:text-white transition-colors">Termos</a>

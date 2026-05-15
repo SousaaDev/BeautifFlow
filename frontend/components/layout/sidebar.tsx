@@ -60,7 +60,7 @@ export function Sidebar() {
     <>
       <div className="p-6 flex justify-center">
         <Link href="/dashboard">
-          <Image src="/logo.png" alt="BeautyFlow Logo" width={40} height={40} className="object-contain" />
+          <Image src="/logo.png" alt="BeautyFlow Logo" width={48} height={48} className="object-contain" />
         </Link>
       </div>
 
@@ -130,7 +130,7 @@ export function Sidebar() {
       {/* Mobile menu button */}
       <div className="lg:hidden fixed top-0 left-0 right-0 z-50 flex items-center justify-between p-4 bg-background border-b">
         <Link href="/dashboard">
-          <Image src="/logo.png" alt="BeautyFlow Logo" width={32} height={32} className="object-contain" />
+          <Image src="/logo.png" alt="BeautyFlow Logo" width={40} height={40} className="object-contain" />
         </Link>
         <Button
           variant="ghost"

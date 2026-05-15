@@ -1,4 +1,4 @@
-import { Flower2 } from 'lucide-react'
+import Image from 'next/image'
 import Link from 'next/link'
 
 export default function AuthLayout({
@@ -11,10 +11,9 @@ export default function AuthLayout({
       {/* Left side - Branding */}
       <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-rose-100 via-pink-100 to-white p-12 flex-col justify-between text-slate-950 dark:bg-slate-950 dark:text-white dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
         <Link href="/" className="flex items-center gap-3">
-          <div className="flex items-center justify-center w-12 h-12 rounded-3xl bg-white shadow-sm border border-slate-200">
-            <Flower2 className="w-6 h-6 text-pink-600" />
+          <div className="flex items-center justify-center w-16 h-16 rounded-3xl overflow-hidden shadow-lg">
+            <Image src="/logo.png" alt="BeautyFlow Logo" width={64} height={64} className="object-contain" />
           </div>
-          <span className="text-2xl font-bold">BeautyFlow</span>
         </Link>
 
         <div className="space-y-6">
@@ -50,10 +49,9 @@ export default function AuthLayout({
         <div className="w-full max-w-lg">
           {/* Mobile logo */}
           <Link href="/" className="flex lg:hidden items-center gap-3 mb-8 justify-center">
-            <div className="flex items-center justify-center w-12 h-12 rounded-3xl bg-pink-500 shadow-lg shadow-pink-200/70 dark:bg-fuchsia-500 dark:shadow-fuchsia-500/30">
-              <Flower2 className="w-6 h-6 text-white" />
+            <div className="flex items-center justify-center w-14 h-14 rounded-3xl overflow-hidden shadow-lg shadow-pink-200/70 dark:shadow-fuchsia-500/30">
+              <Image src="/logo.png" alt="BeautyFlow Logo" width={56} height={56} className="object-contain" />
             </div>
-            <span className="text-2xl font-bold text-slate-950 dark:text-white">BeautyFlow</span>
           </Link>
 
           <div className="rounded-[2rem] border border-slate-200 bg-white p-10 shadow-2xl shadow-slate-200/50 backdrop-blur-xl dark:border-slate-800 dark:bg-slate-900 dark:shadow-black/20">
