@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useSearchParams, useRouter } from 'next/navigation'
 import { useForm, Controller, useFieldArray } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -75,6 +76,8 @@ const paymentMethodLabels: Record<PaymentMethod, string> = {
 }
 
 export default function SalesPage() {
+  const searchParams = useSearchParams()
+  const router = useRouter()
   const { tenant } = useAuth()
   const [sales, setSales] = useState<Sale[]>([])
   const [customers, setCustomers] = useState<Customer[]>([])
@@ -132,6 +135,13 @@ export default function SalesPage() {
       loadData()
     }
   }, [tenant?.id])
+
+  useEffect(() => {
+    if (searchParams.get('new') === 'true') {
+      openCreateDialog()
+      router.replace('/dashboard/sales')
+    }
+  }, [searchParams, router])
 
   const loadData = async () => {
     if (!tenant?.id) return
