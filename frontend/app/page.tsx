@@ -273,10 +273,7 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col md:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-3">
-              <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-fuchsia-600 shadow-lg shadow-fuchsia-500/20">
-                <Flower2 className="w-5 h-5 text-white" />
-              </div>
-              <span className="font-bold text-slate-950 dark:text-white">BeautyFlow</span>
+              <Image src="/logo.png" alt="BeautyFlow Logo" width={32} height={32} className="object-contain" />
             </div>
             <div className="flex items-center gap-6 text-sm text-slate-500 dark:text-slate-400">
               <a href="#" className="hover:text-slate-950 dark:hover:text-white transition-colors">Termos</a>
