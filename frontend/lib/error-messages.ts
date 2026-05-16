@@ -18,24 +18,26 @@ export function getUserFriendlyErrorMessage(error: unknown): string | null {
   // Common auth errors
   if (
     cleanedMessage.includes('Email ou senha') ||
+    cleanedMessage.includes('Invalid credentials') ||
+    cleanedMessage.includes('Credenciais invalidas') ||
     cleanedMessage.includes('incorrect') ||
     cleanedMessage.includes('Incorrect')
   ) {
     return 'Email ou senha incorretos'
   }
 
-  if (message.includes('Email already exists') || message.includes('email already')) {
+  if (cleanedMessage.includes('Email already exists') || cleanedMessage.includes('email already')) {
     return 'Este email ja está cadastrado'
   }
 
-  if (message.includes('Email invalido')) {
+  if (cleanedMessage.includes('Email invalido')) {
     return 'Email inválido'
   }
 
   if (
-    message.includes('Senha') ||
-    message.includes('password') ||
-    message.includes('Password')
+    cleanedMessage.includes('Senha') ||
+    cleanedMessage.includes('password') ||
+    cleanedMessage.includes('Password')
   ) {
     return 'Erro com a senha. Tente novamente.'
   }
@@ -73,7 +75,7 @@ export function getUserFriendlyErrorMessage(error: unknown): string | null {
   }
 
   // If it has technical markers, hide it
-  if (message.includes('endpoint') || message.includes('status') || message.includes('(')) {
+  if (cleanedMessage.includes('endpoint') || cleanedMessage.includes('status') || cleanedMessage.includes('(')) {
     return 'Algo deu errado. Tente novamente.'
   }
 
