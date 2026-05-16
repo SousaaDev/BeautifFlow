@@ -37,6 +37,28 @@
   --sidebar-accent-foreground: oklch(0.35 0.02 350);
   --sidebar-border: oklch(0.92 0.02 350);
   --sidebar-ring: oklch(0.72 0.14 350);
+  --primary: #e53e69;
+  --ring: #e53e69;
+  --color-pink-50: #ffeaf0;
+  --color-pink-100: #fde2ea;
+  --color-pink-200: #f9c4d7;
+  --color-pink-300: #f49cb5;
+  --color-pink-400: #ee6b8f;
+  --color-pink-500: #e53e69;
+  --color-pink-600: #c32f57;
+  --color-pink-700: #9e2a45;
+  --color-pink-800: #762035;
+  --color-pink-900: #4f1424;
+  --color-rose-50: #ffe8f1;
+  --color-rose-100: #ffd9e7;
+  --color-rose-200: #f9bdcf;
+  --color-rose-300: #f28aad;
+  --color-rose-400: #ec6989;
+  --color-rose-500: #e53e69;
+  --color-rose-600: #c03256;
+  --color-rose-700: #982646;
+  --color-rose-800: #6f1f35;
+  --color-rose-900: #491423;
   --success: oklch(0.7 0.12 160);
   --success-foreground: oklch(1 0 0);
   --warning: oklch(0.85 0.12 85);
@@ -76,6 +98,28 @@
   --sidebar-accent-foreground: oklch(0.98 0.01 358);
   --sidebar-border: oklch(0.22 0.03 250);
   --sidebar-ring: oklch(0.60 0.18 330);
+  --primary: #e53e69;
+  --ring: #e53e69;
+  --color-pink-50: #ffe8f1;
+  --color-pink-100: #ffd4e3;
+  --color-pink-200: #f8b9cf;
+  --color-pink-300: #f18aa8;
+  --color-pink-400: #ea698c;
+  --color-pink-500: #e53e69;
+  --color-pink-600: #c12f57;
+  --color-pink-700: #982646;
+  --color-pink-800: #6f1f35;
+  --color-pink-900: #491423;
+  --color-rose-50: #ffe5f0;
+  --color-rose-100: #ffd5e9;
+  --color-rose-200: #f9bcd4;
+  --color-rose-300: #f089aa;
+  --color-rose-400: #ea6980;
+  --color-rose-500: #e53e69;
+  --color-rose-600: #c03256;
+  --color-rose-700: #982646;
+  --color-rose-800: #6f1f35;
+  --color-rose-900: #491423;
 }
 
 @theme inline {
