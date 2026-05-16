@@ -70,26 +70,26 @@ export default function SignupPage() {
   }
 
   return (
-    <div className="space-y-6 text-foreground">
-      <div className="space-y-2 text-center">
-        <h2 className="text-3xl font-bold tracking-tight text-foreground">
+    <div className="space-y-3 text-foreground">
+      <div className="space-y-1 text-center">
+        <h2 className="text-2xl font-bold tracking-tight text-foreground">
           Criar conta
         </h2>
-        <p className="text-muted-foreground">
+        <p className="text-sm text-muted-foreground">
           Comece seu trial gratuito de 3 horas
         </p>
       </div>
 
       {/* Trial badge */}
-      <div className="flex items-center justify-center gap-2 p-3 rounded-lg bg-primary/10 border border-primary/20">
-        <Clock className="w-5 h-5 text-primary" />
-        <span className="text-sm font-medium text-primary">
+      <div className="flex items-center justify-center gap-2 p-2 rounded-lg bg-primary/10 border border-primary/20">
+        <Clock className="w-4 h-4 text-primary" />
+        <span className="text-xs font-medium text-primary">
           3 horas gratis para testar todas as funcionalidades
         </span>
       </div>
 
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-        <div className="space-y-2">
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-2">
+        <div className="space-y-1">
           <Label htmlFor="name">Seu nome</Label>
           <Input
             id="name"
@@ -98,11 +98,11 @@ export default function SignupPage() {
             disabled={isLoading}
           />
           {errors.name && (
-            <p className="text-sm text-destructive">{errors.name.message}</p>
+            <p className="text-xs text-destructive">{errors.name.message}</p>
           )}
         </div>
 
-        <div className="space-y-2">
+        <div className="space-y-1">
           <Label htmlFor="salonName">Nome do salao</Label>
           <Input
             id="salonName"
@@ -111,11 +111,11 @@ export default function SignupPage() {
             disabled={isLoading}
           />
           {errors.salonName && (
-            <p className="text-sm text-destructive">{errors.salonName.message}</p>
+            <p className="text-xs text-destructive">{errors.salonName.message}</p>
           )}
         </div>
 
-        <div className="space-y-2">
+        <div className="space-y-1">
           <Label htmlFor="email">Email</Label>
           <Input
             id="email"
@@ -125,11 +125,11 @@ export default function SignupPage() {
             disabled={isLoading}
           />
           {errors.email && (
-            <p className="text-sm text-destructive">{errors.email.message}</p>
+            <p className="text-xs text-destructive">{errors.email.message}</p>
           )}
         </div>
 
-        <div className="space-y-2">
+        <div className="space-y-1">
           <Label htmlFor="password">Senha</Label>
           <Input
             id="password"
@@ -139,11 +139,11 @@ export default function SignupPage() {
             disabled={isLoading}
           />
           {errors.password && (
-            <p className="text-sm text-destructive">{errors.password.message}</p>
+            <p className="text-xs text-destructive">{errors.password.message}</p>
           )}
         </div>
 
-        <div className="space-y-2">
+        <div className="space-y-1">
           <Label htmlFor="confirmPassword">Confirmar senha</Label>
           <Input
             id="confirmPassword"
@@ -153,17 +153,17 @@ export default function SignupPage() {
             disabled={isLoading}
           />
           {errors.confirmPassword && (
-            <p className="text-sm text-destructive">{errors.confirmPassword.message}</p>
+            <p className="text-xs text-destructive">{errors.confirmPassword.message}</p>
           )}
         </div>
 
-        <Button type="submit" className="w-full" disabled={isLoading}>
+        <Button type="submit" className="w-full mt-2" disabled={isLoading}>
           {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
           Criar conta e comecar trial
         </Button>
       </form>
 
-      <p className="text-center text-sm text-muted-foreground">
+      <p className="text-center text-xs text-muted-foreground mt-2">
         Ja tem uma conta?{' '}
         <Link href="/auth/login" className="font-medium text-primary hover:underline">
           Fazer login
