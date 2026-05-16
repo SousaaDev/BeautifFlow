@@ -145,7 +145,7 @@ export function Sidebar() {
       {mobileOpen && (
         <div className="lg:hidden fixed inset-0 z-40 bg-black/50" onClick={() => setMobileOpen(false)}>
           <div
-            className="fixed inset-y-0 left-0 w-72 bg-sidebar border-r border-sidebar-border flex flex-col pt-16"
+            className="fixed inset-y-0 left-0 w-72 bg-sidebar border-r border-sidebar-border flex flex-col pt-20"
             onClick={(e) => e.stopPropagation()}
           >
             <NavContent />
