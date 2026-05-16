@@ -83,7 +83,7 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex h-24 items-center justify-between">
             <Link href="/">
-              <Image src="/logo.png" alt="BeautyFlow Logo" width={96} height={96} className="object-contain shadow-lg shadow-fuchsia-500/20" />
+              <Image src="/logo.png" alt="BeautyFlow Logo" width={96} height={96} className="object-contain" />
             </Link>
             <nav className="hidden md:flex items-center gap-6">
               <a href="#features" className="text-base text-slate-500 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white transition-colors">

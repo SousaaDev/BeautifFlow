@@ -49,7 +49,7 @@ export default function AuthLayout({
         <div className="w-full max-w-lg">
           {/* Mobile logo */}
           <Link href="/" className="flex lg:hidden items-center gap-3 mb-8 justify-center">
-            <div className="flex items-center justify-center w-24 h-24 rounded-3xl overflow-hidden shadow-lg shadow-pink-200/70 dark:shadow-fuchsia-500/30">
+            <div className="flex items-center justify-center w-24 h-24 rounded-3xl overflow-hidden">
               <Image src="/logo.png" alt="BeautyFlow Logo" width={96} height={96} className="object-contain" />
             </div>
           </Link>
