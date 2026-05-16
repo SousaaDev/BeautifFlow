@@ -17,6 +17,7 @@ import {
   Menu,
   X,
   Scissors,
+  BrandWhatsapp,
 } from 'lucide-react'
 import { useState } from 'react'
 import { cn } from '@/lib/utils'
@@ -33,6 +34,7 @@ const navigation = [
   { name: 'Servicos', href: '/dashboard/services', icon: Sparkles },
   { name: 'Produtos', href: '/dashboard/products', icon: Package },
   { name: 'Agendamentos', href: '/dashboard/appointments', icon: Calendar },
+  { name: 'WhatsApp', href: '/dashboard/whatsapp', icon: BrandWhatsapp },
   { name: 'Vendas', href: '/dashboard/sales', icon: ShoppingCart },
 ]
 

@@ -14,6 +14,7 @@ import membershipRoutes from './membership.routes';
 import paymentRoutes, { webhookRouter } from './payment.routes';
 import billingRoutes from './billing.routes';
 import settingsRoutes from './settings.routes';
+import whatsappRoutes from './whatsapp.routes';
 import publicRoutes from './public.routes';
 import { redisClient } from '../infrastructure/redis';
 
@@ -46,6 +47,7 @@ export const setupRoutes = (app: Express) => {
   app.use('/api/analytics', analyticsRoutes);
   app.use('/api/tenants/:tenantId', loyaltyRoutes);
   app.use('/api/settings', settingsRoutes);
+  app.use('/api/whatsapp', whatsappRoutes);
   app.use('/api/public', publicRoutes);
   app.use('/api/payments/webhooks', webhookRouter);
 };
