@@ -8,17 +8,18 @@ export function getUserFriendlyErrorMessage(error: unknown): string | null {
   }
 
   const message = error instanceof Error ? error.message : String(error)
+  const cleanedMessage = message.replace(/\s*\([^)]*\/api[^)]*\)$/, '').trim()
 
   // Session/Auth errors - redirect happens server-side, don't show
-  if (message.includes('Session expired') || message.includes('401')) {
+  if (cleanedMessage.includes('Session expired')) {
     return null // Silent error, redirect handled in API
   }
 
   // Common auth errors
   if (
-    message.includes('Email ou senha') ||
-    message.includes('incorrect') ||
-    message.includes('Incorrect')
+    cleanedMessage.includes('Email ou senha') ||
+    cleanedMessage.includes('incorrect') ||
+    cleanedMessage.includes('Incorrect')
   ) {
     return 'Email ou senha incorretos'
   }
@@ -58,13 +59,17 @@ export function getUserFriendlyErrorMessage(error: unknown): string | null {
   }
 
   // Token/auth specific
-  if (message.includes('Token')) {
+  if (cleanedMessage.includes('Token')) {
     return 'Erro de autenticação. Faça login novamente.'
   }
 
   // Validation errors - these are usually good to show
-  if (message.includes('must') || message.includes('should') || message.includes('deve')) {
-    return message
+  if (
+    cleanedMessage.includes('must') ||
+    cleanedMessage.includes('should') ||
+    cleanedMessage.includes('deve')
+  ) {
+    return cleanedMessage
   }
 
   // If it has technical markers, hide it

@@ -72,7 +72,7 @@ async function request<T>(
     }
     
     // Handle unauthorized (token expired)
-    if (response.status === 401) {
+    if (response.status === 401 && !skipAuth) {
       Cookies.remove('beautyflow_token')
       if (typeof window !== 'undefined') {
         window.location.href = '/auth/login'
