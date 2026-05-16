@@ -22,17 +22,17 @@ export default function AuthLayout({
             Agende, gerencie clientes e profissionais, controle estoque e aumente seu faturamento com nossa plataforma completa.
           </p>
           <div className="grid grid-cols-3 gap-4 pt-4">
-            <div className="rounded-3xl bg-pink-50 border border-pink-200 p-5 shadow-sm">
+            <div className="rounded-3xl bg-pink-50 border border-pink-200 p-5 shadow-sm dark:bg-slate-900 dark:border-slate-700">
               <p className="text-3xl font-bold text-pink-700">500+</p>
-              <p className="text-sm text-pink-600">Saloes ativos</p>
+              <p className="text-sm text-pink-600 dark:text-pink-200">Saloes ativos</p>
             </div>
-            <div className="rounded-3xl bg-pink-50 border border-pink-200 p-5 shadow-sm">
+            <div className="rounded-3xl bg-pink-50 border border-pink-200 p-5 shadow-sm dark:bg-slate-900 dark:border-slate-700">
               <p className="text-3xl font-bold text-pink-700">50k+</p>
-              <p className="text-sm text-pink-600">Agendamentos/mes</p>
+              <p className="text-sm text-pink-600 dark:text-pink-200">Agendamentos/mes</p>
             </div>
-            <div className="rounded-3xl bg-pink-50 border border-pink-200 p-5 shadow-sm">
+            <div className="rounded-3xl bg-pink-50 border border-pink-200 p-5 shadow-sm dark:bg-slate-900 dark:border-slate-700">
               <p className="text-3xl font-bold text-pink-700">98%</p>
-              <p className="text-sm text-pink-600">Satisfacao</p>
+              <p className="text-sm text-pink-600 dark:text-pink-200">Satisfacao</p>
             </div>
           </div>
         </div>
@@ -47,7 +47,7 @@ export default function AuthLayout({
         <div className="w-full max-w-lg">
           {/* Mobile logo */}
           <Link href="/" className="flex lg:hidden items-center gap-3 mb-4 justify-center">
-            <div className="flex items-center justify-center w-16 h-16 rounded-2xl overflow-hidden bg-white shadow-sm border border-pink-200">
+            <div className="flex items-center justify-center w-16 h-16 rounded-2xl overflow-hidden bg-white shadow-sm border border-pink-200 dark:bg-slate-900">
               <Image src="/logo.png" alt="BeautyFlow Logo" width={64} height={64} className="object-contain" />
             </div>
           </Link>

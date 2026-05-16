@@ -100,7 +100,7 @@ export default function LandingPage() {
               <Button asChild variant="ghost" className="text-base text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white">
                 <Link href="/auth/login">Entrar</Link>
               </Button>
-              <Button asChild className="text-base bg-fuchsia-600 text-white hover:bg-fuchsia-500">
+              <Button asChild className="text-base bg-pink-600 text-white hover:bg-pink-500">
                 <Link href="/auth/signup">Começar grátis</Link>
               </Button>
             </div>
@@ -157,8 +157,8 @@ export default function LandingPage() {
             {features.map((feature) => (
               <Card key={feature.title} className="border border-slate-200 bg-white shadow-lg shadow-slate-200/40 transition duration-300 hover:-translate-y-1 dark:border-slate-800 dark:bg-slate-900 dark:shadow-black/20">
                 <CardHeader>
-                  <div className="w-12 h-12 rounded-lg bg-fuchsia-600/10 flex items-center justify-center mb-4 dark:bg-slate-800">
-                    <feature.icon className="w-6 h-6 text-fuchsia-600 dark:text-pink-300" />
+                  <div className="w-12 h-12 rounded-lg bg-pink-600/10 flex items-center justify-center mb-4 dark:bg-slate-800">
+                    <feature.icon className="w-6 h-6 text-pink-600 dark:text-pink-300" />
                   </div>
                   <CardTitle className="text-slate-950 dark:text-white">{feature.title}</CardTitle>
                   <CardDescription className="text-slate-600 dark:text-slate-400 text-base">
@@ -198,12 +198,12 @@ export default function LandingPage() {
                   <ul className="space-y-4">
                     {plan.features.map((feature) => (
                       <li key={feature} className="flex items-start gap-3 text-slate-700 dark:text-slate-300">
-                        <Check className="mt-1 w-5 h-5 text-fuchsia-500 dark:text-pink-300 shrink-0" />
+                        <Check className="mt-1 w-5 h-5 text-pink-500 dark:text-pink-300 shrink-0" />
                         <span className="text-sm sm:text-base leading-6">{feature}</span>
                       </li>
                     ))}
                   </ul>
-                  <Button asChild className="w-full py-4 bg-fuchsia-600 text-white hover:bg-fuchsia-500">
+                  <Button asChild className="w-full py-4 bg-pink-600 text-white hover:bg-pink-500">
                     <Link href="/auth/signup">Começar agora</Link>
                   </Button>
                 </CardContent>
