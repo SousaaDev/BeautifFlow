@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { BrandWhatsapp, RefreshCw } from 'lucide-react'
+import { MessageSquare, RefreshCw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { whatsappApi, WhatsAppStatusResponse } from '@/lib/api/whatsapp'
@@ -35,7 +35,7 @@ export default function WhatsAppPage() {
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div>
           <div className="inline-flex items-center gap-2 rounded-full bg-green-500/10 px-3 py-1 text-sm font-medium text-green-700">
-            <BrandWhatsapp className="w-4 h-4" />
+            <MessageSquare className="w-4 h-4" />
             WhatsApp Bot
           </div>
           <h1 className="mt-4 text-3xl font-semibold tracking-tight">Conectar WhatsApp</h1>
