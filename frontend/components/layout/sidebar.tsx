@@ -58,7 +58,7 @@ export function Sidebar() {
 
   const NavContent = () => (
     <>
-      <div className="p-6 flex justify-center">
+      <div className="p-6 flex justify-center hidden lg:flex">
         <Link href="/dashboard">
           <Image src="/logo.png" alt="BeautyFlow Logo" width={80} height={80} className="object-contain" />
         </Link>

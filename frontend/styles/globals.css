@@ -142,3 +142,36 @@
     caret-color: auto;
   }
 }
+
+/* Brand pink overrides: map common Tailwind pink utilities to the desired brand color (#e63d68) */
+:root {
+  --brand-pink-50: #ffeaf0;
+  --brand-pink-100: #fde2ea;
+  --brand-pink-200: #f9cbd4;
+  --brand-pink-300: #f6a2b4;
+  --brand-pink-400: #ee6a86;
+  --brand-pink-500: #e63d68; /* primary brand color requested */
+  --brand-pink-700: #b2284a;
+}
+
+/* Text colors */
+.text-pink-600,
+.text-pink-700,
+.text-pink-300,
+.dark .text-pink-300 {
+  color: var(--brand-pink-500) !important;
+}
+
+/* Backgrounds */
+.bg-pink-100 { background-color: var(--brand-pink-100) !important; }
+.bg-pink-500, .!bg-pink-500 { background-color: var(--brand-pink-500) !important; }
+.hover\:bg-pink-400:hover { background-color: var(--brand-pink-400) !important; }
+
+/* Borders / rings / shadows */
+.border-pink-200 { border-color: var(--brand-pink-200) !important; }
+.ring-pink-500 { --tw-ring-color: var(--brand-pink-500) !important; }
+.shadow-pink-500 { --tw-shadow-color: color-mix(in srgb, var(--brand-pink-500) 25%, transparent) !important; }
+
+/* Badge/button overrides that use important utilities */
+.text-pink-600.dark\:text-pink-300 { color: var(--brand-pink-500) !important; }
+
