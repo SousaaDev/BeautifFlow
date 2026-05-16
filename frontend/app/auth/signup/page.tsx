@@ -14,6 +14,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { authApi } from '@/lib/api/auth'
+import { getUserFriendlyErrorMessage } from '@/lib/error-messages'
 
 const signupSchema = z.object({
   name: z.string().min(2, 'Nome deve ter pelo menos 2 caracteres'),
@@ -62,8 +63,10 @@ export default function SignupPage() {
       toast.success('Conta criada com sucesso! Seu trial de 3 horas comecou.')
       window.location.href = '/dashboard'
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Erro ao criar conta'
-      toast.error(message)
+      const friendlyMessage = getUserFriendlyErrorMessage(error)
+      if (friendlyMessage) {
+        toast.error(friendlyMessage)
+      }
     } finally {
       setIsLoading(false)
     }

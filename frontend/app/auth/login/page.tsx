@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { authApi } from '@/lib/api/auth'
+import { getUserFriendlyErrorMessage } from '@/lib/error-messages'
 
 const loginSchema = z.object({
   email: z.string().email('Email invalido'),
@@ -53,8 +54,10 @@ export default function LoginPage() {
       toast.success('Login realizado com sucesso!')
       window.location.href = '/dashboard'
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Email ou senha incorretos'
-      toast.error(message)
+      const friendlyMessage = getUserFriendlyErrorMessage(error)
+      if (friendlyMessage) {
+        toast.error(friendlyMessage)
+      }
     } finally {
       setIsLoading(false)
     }

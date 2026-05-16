@@ -23,6 +23,7 @@ import { useToast } from '@/hooks/use-toast'
 import { authApi } from '@/lib/api/auth'
 import { tenantApi } from '@/lib/api/tenants'
 import { settingsApi, NotificationSettings } from '@/lib/api/settingsApi'
+import { getUserFriendlyErrorMessage } from '@/lib/error-messages'
 import {
   WEEKDAY_KEYS,
   WEEKDAY_LABELS_PT,
@@ -167,9 +168,10 @@ export default function SettingsPage() {
         description: 'Perfil atualizado com sucesso',
       })
     } catch (error) {
+      const friendlyMessage = getUserFriendlyErrorMessage(error)
       toast({
         title: 'Erro',
-        description: error instanceof Error ? error.message : 'Falha ao atualizar perfil',
+        description: friendlyMessage,
         variant: 'destructive',
       })
     } finally {
@@ -222,9 +224,10 @@ export default function SettingsPage() {
       setNewPassword('')
       setConfirmPassword('')
     } catch (error) {
+      const friendlyMessage = getUserFriendlyErrorMessage(error)
       toast({
         title: 'Erro',
-        description: error instanceof Error ? error.message : 'Falha ao alterar senha',
+        description: friendlyMessage,
         variant: 'destructive',
       })
     } finally {
