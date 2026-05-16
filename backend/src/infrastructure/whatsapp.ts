@@ -120,34 +120,55 @@ export class WhatsAppService {
         const lowerBody = body.toLowerCase()
 
         if (lowerBody.includes('ping') || lowerBody === '!ping') {
-          await message.reply('pong 🟢')
+          try {
+            await record.client.sendMessage(message.from, 'pong 🟢')
+          } catch (err) {
+            console.error('Erro ao enviar pong via sendMessage, tentando reply...', err)
+            try { await message.reply('pong 🟢') } catch (e) { console.error('fallback reply failed', e) }
+          }
           return
         }
 
         if (lowerBody.includes('agendar') || lowerBody.includes('agenda')) {
-          await message.reply(
-            '📅 Para agendar, envie uma mensagem com: Nome | Serviço | Data | Hora. Exemplo:\nJoana | Corte | 25/05/2026 | 14:00'
-          )
+          const text = '📅 Para agendar, envie uma mensagem com: Nome | Serviço | Data | Hora. Exemplo:\nJoana | Corte | 25/05/2026 | 14:00'
+          try {
+            await record.client.sendMessage(message.from, text)
+          } catch (err) {
+            console.error('Erro ao enviar instrução de agendamento via sendMessage:', err, { id: message.id, body: message.body })
+            try { await message.reply(text) } catch (e) { console.error('fallback reply failed', e) }
+          }
           return
         }
 
         if (lowerBody.includes('horário') || lowerBody.includes('horario') || lowerBody.includes('disponível')) {
-          await message.reply(
-            '🕒 Nossos horários estão abertos. Por favor me diga qual serviço você deseja e em qual dia para que eu te ajude.'
-          )
+          const text = '🕒 Nossos horários estão abertos. Por favor me diga qual serviço você deseja e em qual dia para que eu te ajude.'
+          try {
+            await record.client.sendMessage(message.from, text)
+          } catch (err) {
+            console.error('Erro ao enviar horários via sendMessage:', err, { id: message.id, body: message.body })
+            try { await message.reply(text) } catch (e) { console.error('fallback reply failed', e) }
+          }
           return
         }
 
         if (lowerBody.includes('ajuda') || lowerBody.includes('olá') || lowerBody.includes('oi')) {
-          await message.reply(
-            'Olá! Eu sou o assistente do salão. Posso ajudar com agendamentos, consultas de horários e informações de serviços.'
-          )
+          const text = 'Olá! Eu sou o assistente do salão. Posso ajudar com agendamentos, consultas de horários e informações de serviços.'
+          try {
+            await record.client.sendMessage(message.from, text)
+          } catch (err) {
+            console.error('Erro ao enviar mensagem de ajuda via sendMessage:', err, { id: message.id, body: message.body })
+            try { await message.reply(text) } catch (e) { console.error('fallback reply failed', e) }
+          }
           return
         }
 
-        await message.reply(
-          'Recebi sua mensagem! Em breve a equipe do salão BeautyFlow responderá. Para agendar, escreva: Nome | Serviço | Data | Hora.'
-        )
+        const fallback = 'Recebi sua mensagem! Em breve a equipe do salão BeautyFlow responderá. Para agendar, escreva: Nome | Serviço | Data | Hora.'
+        try {
+          await record.client.sendMessage(message.from, fallback)
+        } catch (err) {
+          console.error('Erro ao enviar mensagem fallback via sendMessage:', err, { id: message.id, body: message.body })
+          try { await message.reply(fallback) } catch (e) { console.error('fallback reply failed', e) }
+        }
       } catch (error) {
         console.error('Erro ao responder mensagem do WhatsApp:', error)
       }
