@@ -6,6 +6,7 @@ interface RegisterData {
   password: string
   name: string
   salonName: string
+  whatsapp?: string
 }
 
 interface LoginData {

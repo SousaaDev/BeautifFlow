@@ -19,6 +19,7 @@ const registerSchema = z.object({
   salonName: z.string().min(2),
   email: z.string().email(),
   password: z.string().min(6),
+  whatsapp: z.string().min(6).optional(),
 });
 
 const userRepository = new UserRepositoryImpl(pool);
@@ -56,6 +57,7 @@ const buildTenantPayload = async (tenant: Tenant) => {
     stripeCustomerId: null,
     businessHours: tenant.businessHours || {},
     bufferMinutes: tenant.bufferMinutes ?? 10,
+    ownerWhatsApp: (tenant.settings && (tenant.settings as any).ownerWhatsApp) || null,
     createdAt: tenant.createdAt.toISOString(),
     updatedAt: tenant.createdAt.toISOString(),
   };
@@ -81,6 +83,7 @@ export const register = async (req: Request, res: Response) => {
       trialEndsAt,
       businessHours: {},
       bufferMinutes: 10,
+      settings: data.whatsapp ? { ownerWhatsApp: data.whatsapp } : {},
     });
 
     const hashedPassword = await bcrypt.hash(data.password, 10);

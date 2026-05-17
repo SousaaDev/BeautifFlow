@@ -81,6 +81,8 @@ export const update = async (req: Request, res: Response) => {
 
   try {
     const body = readJsonBody(req);
+    // load existing tenant to allow merging settings if needed
+    const existingTenant = await tenantRepository.findById(id);
     const updateData: Partial<Tenant> = {};
 
     // Mapeamento manual dos campos
@@ -116,6 +118,17 @@ export const update = async (req: Request, res: Response) => {
     if (Object.prototype.hasOwnProperty.call(body, 'trialEndsAt') && typeof body.trialEndsAt === 'string') {
       const t = body.trialEndsAt.trim();
       if (t) updateData.trialEndsAt = new Date(t);
+    }
+
+    // Support updating settings directly
+    if (Object.prototype.hasOwnProperty.call(body, 'settings') && typeof body.settings === 'object') {
+      updateData.settings = body.settings as Record<string, unknown> as any;
+    }
+
+    // Support updating ownerWhatsApp as a convenience key (merges into settings)
+    if (Object.prototype.hasOwnProperty.call(body, 'ownerWhatsApp') && typeof body.ownerWhatsApp === 'string') {
+      const currentSettings = (existingTenant as any)?.settings ?? {}
+      updateData.settings = { ...(currentSettings as Record<string, unknown>), ownerWhatsApp: body.ownerWhatsApp }
     }
 
     // 3. SE CHEGAR AQUI VAZIO, O FRONTEND ESTÁ ENVIANDO CHAVES ERRADAS

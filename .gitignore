@@ -26,3 +26,7 @@ backend/coverage/
 
 # Dependency directories
 **/node_modules/
+
+# Ignore WhatsApp sessions
+backend/whatsapp-sessions/
+

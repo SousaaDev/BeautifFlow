@@ -22,6 +22,7 @@ const signupSchema = z.object({
   email: z.string().email('Email invalido'),
   password: z.string().min(6, 'Senha deve ter pelo menos 6 caracteres'),
   confirmPassword: z.string(),
+  whatsapp: z.string().min(6, 'WhatsApp invalido'),
 }).refine((data) => data.password === data.confirmPassword, {
   message: 'As senhas nao coincidem',
   path: ['confirmPassword'],
@@ -49,6 +50,7 @@ export default function SignupPage() {
         salonName: data.salonName,
         email: data.email,
         password: data.password,
+        whatsapp: data.whatsapp,
       })
 
       if (!response.token) {
@@ -157,6 +159,19 @@ export default function SignupPage() {
           />
           {errors.confirmPassword && (
             <p className="text-xs text-destructive">{errors.confirmPassword.message}</p>
+          )}
+        </div>
+
+        <div className="space-y-1">
+          <Label htmlFor="whatsapp">WhatsApp (dono)</Label>
+          <Input
+            id="whatsapp"
+            placeholder="5511999887766"
+            {...register('whatsapp')}
+            disabled={isLoading}
+          />
+          {errors.whatsapp && (
+            <p className="text-xs text-destructive">{errors.whatsapp.message}</p>
           )}
         </div>
 

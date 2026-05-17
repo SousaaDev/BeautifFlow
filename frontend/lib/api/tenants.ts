@@ -7,6 +7,7 @@ export const tenantApi = {
     data: Partial<Pick<Tenant, 'name' | 'slug' | 'businessHours' | 'bufferMinutes'>> & {
       business_hours?: Record<string, string>
       buffer_minutes?: number
+      settings?: Record<string, any>
     }
   ) => api.put<Tenant>(`/api/tenants/${tenantId}`, data),
 }

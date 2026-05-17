@@ -42,6 +42,7 @@ export default function SettingsPage() {
 
   const [userName, setUserName] = useState(user?.name || '')
   const [userEmail, setUserEmail] = useState(user?.email || '')
+  const [ownerWhatsApp, setOwnerWhatsApp] = useState<string>('')
   const [companyName, setCompanyName] = useState(tenant?.name || '')
   const [companySlug, setCompanySlug] = useState(tenant?.slug || '')
   const [weeklySchedule, setWeeklySchedule] = useState<Record<WeekdayKey, DayScheduleUi>>(() =>
@@ -86,6 +87,13 @@ export default function SettingsPage() {
     setBufferMinutes(tenant.bufferMinutes ?? 10)
 
     setWeeklySchedule(scheduleFromTenant(tenant.businessHours))
+    // ownerWhatsApp may be stored in tenant.settings.ownerWhatsApp
+    try {
+      const s = (tenant as any).settings ?? (tenant as any).settings
+      setOwnerWhatsApp((s && s.ownerWhatsApp) || (tenant as any).ownerWhatsApp || '')
+    } catch (e) {
+      setOwnerWhatsApp((tenant as any).ownerWhatsApp || '')
+    }
   }, [tenant])
 
   const hasActiveSubscription = tenant?.status === 'ACTIVE'
@@ -143,6 +151,7 @@ export default function SettingsPage() {
         businessHours: Record<string, string>
         business_hours: Record<string, string>
         bufferMinutes: number
+        settings?: Record<string, any>
       } = {
         businessHours: businessHoursPayload,
         business_hours: businessHoursPayload,
@@ -153,6 +162,15 @@ export default function SettingsPage() {
       }
       if (companySlug !== tenant.slug) {
         tenantPayload.slug = companySlug
+      }
+      // include owner WhatsApp in tenant settings when changed
+      try {
+        const currentOwner = (tenant as any)?.settings?.ownerWhatsApp || (tenant as any)?.ownerWhatsApp || ''
+        if ((ownerWhatsApp || '') !== (currentOwner || '')) {
+          tenantPayload.settings = { ...(tenant as any)?.settings, ownerWhatsApp: ownerWhatsApp || null }
+        }
+      } catch (e) {
+        if (ownerWhatsApp) tenantPayload.settings = { ownerWhatsApp }
       }
 
       await tenantApi.update(tenantId, tenantPayload)
@@ -301,6 +319,16 @@ export default function SettingsPage() {
                     value={userEmail}
                     onChange={(e) => setUserEmail(e.target.value)}
                     className="text-sm" 
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="owner-whatsapp" className="text-xs text-muted-foreground">WhatsApp do proprietário</Label>
+                  <Input
+                    id="owner-whatsapp"
+                    value={ownerWhatsApp}
+                    onChange={(e) => setOwnerWhatsApp(e.target.value)}
+                    placeholder="5511999998888"
+                    className="text-sm"
                   />
                 </div>
               </div>
