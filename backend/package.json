@@ -11,6 +11,7 @@
     "setup-pitr": "ts-node scripts/setup-pitr.ts",
     "test": "jest",
     "test-endpoints": "node ../../test-endpoints.js",
+    "postinstall": "npm rebuild puppeteer --update-binary || true",
     "lint": "eslint src/**/*.ts",
     "format": "prettier --write src/**/*.ts"
   },

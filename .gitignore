@@ -29,4 +29,6 @@ backend/coverage/
 
 # Ignore WhatsApp sessions
 backend/whatsapp-sessions/
+# Ignore local chrome binaries
+backend/local-chrome/
 
