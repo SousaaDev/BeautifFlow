@@ -8,6 +8,9 @@ import { setupRoutes } from './routes';
 import { redisClient } from './infrastructure/redis';
 import { WorkerService } from './infrastructure/workers';
 import { auditMiddleware } from './middleware/audit.middleware';
+import { whatsappService } from './infrastructure/whatsapp';
+import { readdirSync, existsSync } from 'fs'
+import path from 'path'
 
 console.log('Starting BeautyFlow backend...');
 
@@ -100,6 +103,30 @@ const ensureCustomerSchema = async () => {
 const startServer = async () => {
   await connectDatabase();
   await ensureCustomerSchema();
+
+  // On startup, auto-start any WhatsApp sessions that already have session folders
+  try {
+    const sessionsDir = path.join(process.cwd(), 'whatsapp-sessions')
+    if (existsSync(sessionsDir)) {
+      const items = readdirSync(sessionsDir, { withFileTypes: true })
+      for (const item of items) {
+        if (item.isDirectory()) {
+          const tenantId = item.name
+          console.log(`[STARTUP] Attempting to auto-start WhatsApp session for tenant ${tenantId}`)
+          try {
+            // startSession is idempotent and will reuse existing session if present
+            whatsappService.startSession(tenantId).catch((err) => {
+              console.error(`[STARTUP] Failed to start WhatsApp session for ${tenantId}:`, err)
+            })
+          } catch (err) {
+            console.error(`[STARTUP] Error while initiating session for ${tenantId}:`, err)
+          }
+        }
+      }
+    }
+  } catch (err) {
+    console.warn('[STARTUP] Error scanning whatsapp-sessions folder:', err)
+  }
 
   app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);

@@ -82,6 +82,34 @@ export class RedisClient {
     await this.client.setEx(key, ttlSeconds, JSON.stringify(data));
   }
 
+  async get(key: string): Promise<string | null> {
+    if (!this.isConnected || !this.client) {
+      return null;
+    }
+    return this.client.get(key);
+  }
+
+  async set(key: string, value: string, mode?: 'EX', durationSeconds?: number): Promise<void> {
+    if (!this.isConnected || !this.client) {
+      return;
+    }
+
+    if (mode === 'EX' && typeof durationSeconds === 'number') {
+      await this.client.set(key, value, {
+        EX: durationSeconds,
+      });
+    } else {
+      await this.client.set(key, value);
+    }
+  }
+
+  async del(key: string): Promise<void> {
+    if (!this.isConnected || !this.client) {
+      return;
+    }
+    await this.client.del(key);
+  }
+
   async invalidateCache(pattern: string): Promise<void> {
     if (!this.client) return;
     const keys = await this.client.keys(pattern);

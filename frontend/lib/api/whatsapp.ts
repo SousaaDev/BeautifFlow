@@ -8,7 +8,9 @@ export interface WhatsAppStatusResponse {
 }
 
 export const whatsappApi = {
-  getStatus: () => api.get<WhatsAppStatusResponse>('/api/whatsapp/status'),
-  getQr: () => api.get<WhatsAppStatusResponse>('/api/whatsapp/qr'),
+  getStatus: () => api.get<WhatsAppStatusResponse>(`/api/whatsapp/status?t=${Date.now()}`),
+  getQr: () => api.get<WhatsAppStatusResponse>(`/api/whatsapp/qr?t=${Date.now()}`),
   sendMessage: (number: string, text: string) => api.post<{ success: boolean }>('/api/whatsapp/send', { number, text }),
+  start: () => api.post<WhatsAppStatusResponse>('/api/whatsapp/start', {}),
+  disconnect: () => api.post<{ success: boolean; message: string }>('/api/whatsapp/disconnect', {}),
 }

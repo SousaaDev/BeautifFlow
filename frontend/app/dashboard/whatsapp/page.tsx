@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { MessageSquare, RefreshCw } from 'lucide-react'
+import { MessageSquare, RefreshCw, LogOut, Play } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { whatsappApi, WhatsAppStatusResponse } from '@/lib/api/whatsapp'
@@ -24,9 +24,38 @@ export default function WhatsAppPage() {
     }
   }
 
+  const handleDisconnect = async () => {
+    if (!window.confirm('Tem certeza que deseja desconectar a conta atual e gerar um novo QR Code para reconectar?')) return
+    setIsLoading(true)
+    setError(null)
+    try {
+      // Disconnect fully (remove session) and immediately start a new session to generate QR
+      await whatsappApi.disconnect()
+      await whatsappApi.start()
+      await loadStatus()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erro ao desconectar/iniciar o WhatsApp')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleStart = async () => {
+    setIsLoading(true)
+    setError(null)
+    try {
+      await whatsappApi.start()
+      await loadStatus()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erro ao iniciar a sessão do WhatsApp')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
   useEffect(() => {
     loadStatus()
-    const intervalId = window.setInterval(loadStatus, 10000)
+    const intervalId = window.setInterval(loadStatus, 3000)
     return () => window.clearInterval(intervalId)
   }, [])
 
@@ -69,6 +98,11 @@ export default function WhatsAppPage() {
               <div className="rounded-xl border border-border bg-background p-4 text-sm text-foreground">
                 <p className="font-medium">Conectado</p>
                 <p>O WhatsApp está pronto para receber mensagens de clientes.</p>
+                <div className="mt-3">
+                  <Button variant="destructive" onClick={handleDisconnect} disabled={isLoading}>
+                    <LogOut className="mr-2 h-4 w-4" /> Desconectar e gerar QR
+                  </Button>
+                </div>
               </div>
             ) : null}
 
@@ -76,6 +110,11 @@ export default function WhatsAppPage() {
               <div className="rounded-xl border border-yellow-500/20 bg-yellow-500/10 p-4 text-sm text-yellow-900">
                 <p className="font-medium">Reconectar</p>
                 <p>Abra o WhatsApp Web pelo celular e escaneie o QR Code novamente.</p>
+                <div className="mt-3">
+                  <Button onClick={handleStart} disabled={isLoading}>
+                    <Play className="mr-2 h-4 w-4" /> Iniciar sessão
+                  </Button>
+                </div>
               </div>
             ) : null}
           </CardContent>
